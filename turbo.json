@@ -35,6 +35,9 @@
       "cache": false
     },
     "lint": {},
+    "@solvapay/conformance-typescript#lint": {
+      "dependsOn": ["^build"]
+    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": []

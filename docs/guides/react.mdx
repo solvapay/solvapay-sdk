@@ -57,15 +57,24 @@ function App() {
 }
 ```
 
-### 2. Zero-Config Usage
+### 2. Serve the routes the components call
 
-By default, `SolvaPayProvider` uses these API endpoints:
+By default, `SolvaPayProvider` calls routes under `/api` on your own backend: `/api/check-purchase`, `/api/create-payment-intent`, `/api/process-payment`, `/api/list-plans` and the rest. `solvapayRoutes()` from `@solvapay/server/fetch` serves all of them from one Fetch handler:
 
-- `/api/check-purchase` - Check purchase status
-- `/api/create-payment-intent` - Create payment intents
-- `/api/process-payment` - Process payments
+```typescript
+// app/api/[...solvapay]/route.ts (Next.js App Router), or any Fetch-style server
+import { solvapayRoutes } from '@solvapay/server/fetch'
 
-If your backend uses these routes, no configuration is needed!
+const routes = solvapayRoutes() // basePath defaults to /api
+export const GET = routes
+export const POST = routes
+export const PUT = routes
+export const DELETE = routes
+```
+
+The routes act for the signed-in user, taken from a bearer token they verify (`SOLVAPAY_JWT_SECRET`, `SOLVAPAY_JWKS_URL`, or Supabase's) or, behind a gateway you trust, `SOLVAPAY_AUTH_TRUST_GATEWAY=true`. A request with neither gets a 401. A known path with the wrong method gets 405, and an unknown path 404.
+
+On a Python or Go backend, serve the same routes with [`solvapay.web.routes`](/sdks/python/guides/react-web-checkout) or [`NewWebHandler`](/sdks/go/guides/react-web-checkout). The components don't change.
 
 ## Provider Configuration
 

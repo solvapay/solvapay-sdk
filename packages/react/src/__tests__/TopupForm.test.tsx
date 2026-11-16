@@ -112,6 +112,15 @@ describe('TopupForm', () => {
     })
   })
 
+  it('renders the buyer country field, without which it can never be submitted', async () => {
+    renderWithProvider(React.createElement(TopupForm, { amount: 1000 }))
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId('stripe-elements')).toBeTruthy()
+    })
+    expect(screen.getByRole('combobox', { name: /country/i })).toBeTruthy()
+  })
+
   it('does not call processPayment (verifies it is NOT called)', async () => {
     const processPayment = vi.fn()
     const createTopupPayment = vi.fn().mockResolvedValue({

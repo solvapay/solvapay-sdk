@@ -1,5 +1,39 @@
 # @solvapay/mcp-core changelog
 
+## 0.6.1
+
+### Patch Changes
+
+- 2277cb5: `account` no longer tells a customer who can call to "continue".
+  - The "To continue, call `account` with view: …" line now ends the text only when the customer is blocked: no plan yet, short of credits, allowance used up, or a free plan to claim. A funded or within-allowance customer (a credits plan with balance, a subscription, a free plan with calls left, overage, a cancelled plan still running) got it too, and hosts and models read it as a block. The body still names the optional next step (top up, switch plan, reactivate).
+  - The bootstrap payload's `product` (`account`'s `structuredContent` and `solvapay://bootstrap.json`) now carries only `reference`, `name`, `status`, `description` and `imageUrl`. It used to pass the whole product through, including the merchant's free-form `metadata` and its own `balance` and `totalTransactions`, which read as the customer having a balance of 0. The customer's balance is `customer.balance`. `BootstrapProduct` is now a `Pick` of those five fields; a merchant handler's `ctx.product` was already only `{ reference, name }`.
+
+  Conformance: 22 narration, transport-tools and tool-descriptor cases re-recorded (9 of them record the product). Python and Go adopt them in their own PR.
+
+## 0.6.0
+
+### Minor Changes
+
+- 3b7fecd: Merchant MCP servers built with `createSolvaPayMcpFetch` or `createMcpOAuthBridge` now verify every bearer token with SolvaPay (`/v1/customer/auth/userinfo`) before serving a request. The customer comes from SolvaPay's answer, never from the token's own payload, so a token SolvaPay doesn't recognise is refused with the 401 sign-in challenge. If SolvaPay can't be reached, the request gets a 503 instead of being served. Valid answers are cached for 60 seconds. `@solvapay/mcp-core` adds `createSolvaPayTokenVerifier` and `verifyAuthInfoFromBearer`. Upgrade is strongly recommended.
+
+### Patch Changes
+
+- f2b03e5: The route helpers (`checkPurchaseCore`, `syncCustomerCore` and the routes built on them) always look the caller's user up by `externalRef`. Before, a user id starting with `cus_` was used as that customer, so a user whose id was `cus_<someone>` acted for them.
+
+  Server code that already knows the customer marks the request with the new `withCustomerRef(request, customerRef)`; the helpers then act for that customer as `ensureCustomer` does. `@solvapay/mcp-core`'s `buildSolvaPayRequest` marks the requests the widget tools build with the signed-in `customer_ref`, so MCP servers need no change.
+
+- 5aa5637: Fixes found by the conformance coverage work:
+  - A customer create that fails with anything but 409 no longer leaves the user marked as attempted. The next call creates the customer instead of sending your own user id to the API as a customer ref.
+  - A plan priced only in tier bands is narrated as paid, not as "requires no payment".
+  - One unit of a plural meter reads in the singular: "per search", "per query", not "per searche".
+  - A recurring plan with a price but no currency says how often it bills ("is billed every year") instead of "is a year".
+  - `ctx.customer.plan` is read from the limits response's `planRef`, which the API sends. It was always null.
+  - The ChatGPT `tools/list` bypass finds the user-agent on MCP SDK v2's `ctx.http.req`, not only on `requestInfo`.
+  - An invalid `publicBaseUrl` throws a `SolvaPayError` with code `invalid_argument`.
+
+- Updated dependencies [80b8b65]
+  - @solvapay/core@1.9.0
+
 ## 0.5.0
 
 ### Minor Changes

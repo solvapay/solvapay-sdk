@@ -1,0 +1,32 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "no-active-plan",
+  "description": "No plan and no purchase is upgrade_required: the message says there is no active plan and points at checkout.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "",
+        "checkoutUrl": "https://pay.example.com/checkout"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "message": "You don't have an active plan for this tool. [Open checkout](https://pay.example.com/checkout) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+      "reason": "upgrade_required",
+      "nextAction": "checkout",
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "process-payment-default-product",
+  "description": "process_payment with an empty productRef processes against the server's product, without a planRef.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "process_payment",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL06",
+      "arguments": {
+        "paymentIntentId": "pi_tl6",
+        "productRef": ""
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_tl6/process",
+          "body": {
+            "type": "one-time",
+            "status": "succeeded",
+            "purchase": {
+              "reference": "pur_tl6",
+              "status": "active"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "type": "one-time",
+            "status": "succeeded",
+            "purchase": {
+              "reference": "pur_tl6",
+              "status": "active"
+            }
+          }
+        }
+      ],
+      "structuredContent": {
+        "type": "one-time",
+        "status": "succeeded",
+        "purchase": {
+          "reference": "pur_tl6",
+          "status": "active"
+        }
+      }
+    }
+  }
+}

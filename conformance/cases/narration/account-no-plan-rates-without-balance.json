@@ -1,0 +1,128 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-no-plan-rates-without-balance",
+  "description": "No plan purchase; limits name a catalog plan with no pricing options, so it is paid but of unknown shape and the account still has no plan. Without a balance peg, pay-as-you-go plans are quoted in money per unit, singular (a lookup), and from the first band's price when several bands charge.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "text",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_nr_rates",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_rates",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_nr_legacy2",
+            "name": "Legacy",
+            "type": "recurring",
+            "price": 1500,
+            "currency": "USD",
+            "requiresPayment": true
+          },
+          {
+            "reference": "pln_nr_lookup",
+            "name": "Lookup API",
+            "type": "usage-based",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 3,
+                "currency": "USD",
+                "meter": "lookups"
+              }
+            ]
+          },
+          {
+            "reference": "pln_nr_docs",
+            "name": "Docs API",
+            "type": "usage-based",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 1000,
+                "currency": "USD",
+                "oneTime": true
+              },
+              {
+                "kind": "tier",
+                "from": 0,
+                "to": 100,
+                "mode": "graduated",
+                "charge": {
+                  "per": "unit",
+                  "amountMinor": 5,
+                  "currency": "USD",
+                  "meter": "documents"
+                }
+              },
+              {
+                "kind": "tier",
+                "from": 100,
+                "to": null,
+                "mode": "graduated",
+                "charge": {
+                  "per": "unit",
+                  "amountMinor": 2,
+                  "currency": "USD",
+                  "meter": "documents"
+                }
+              }
+            ]
+          }
+        ],
+        "customer": {
+          "ref": "cus_NR13",
+          "email": null,
+          "name": null,
+          "purchase": {
+            "customerRef": "cus_NR13",
+            "purchases": []
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": null,
+          "usage": null,
+          "limits": {
+            "withinLimits": true,
+            "remaining": 10,
+            "planRef": "pln_nr_legacy2"
+          }
+        },
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Welcome to Stock Research**\n\nStock Research has no plan yet. Legacy is $15 once for unlimited · planRef: pln_nr_legacy2, Lookup API is $0.03 per lookup · planRef: pln_nr_lookup, Docs API is from $0.05 per document · planRef: pln_nr_docs. Reply with a plan name to activate it.\nSigned in as: cus_NR13\n\nTo continue, call `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

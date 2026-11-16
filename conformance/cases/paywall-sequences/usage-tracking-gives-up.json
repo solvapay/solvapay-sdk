@@ -1,0 +1,182 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "usage-tracking-gives-up",
+  "description": "A success event that keeps getting 404 Customer not found is sent three times and then dropped, and the call still returns its result. A fail event refused for another reason (400) is sent once, and the caller sees the handler's own error.",
+  "setup": {
+    "productRef": "prd_pw_seq"
+  },
+  "steps": [
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-13T09:30:00.000Z",
+      "args": {
+        "customerRef": "cus_PW05",
+        "handler": "succeed",
+        "toolName": "search"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "pln_pw_pro",
+            "meterName": "requests"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW05",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_PW05",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_pw_seq",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794562200000_<random>:success",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794562200000_<random>",
+                "toolName": "search",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-13T09:30:00.000Z"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_PW05",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_pw_seq",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794562200000_<random>:success",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794562200000_<random>",
+                "toolName": "search",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-13T09:30:00.000Z"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_PW05",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_pw_seq",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794562200000_<random>:success",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794562200000_<random>",
+                "toolName": "search",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-13T09:30:00.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-13T09:30:01.000Z",
+      "args": {
+        "customerRef": "cus_PW05",
+        "handler": "fail",
+        "toolName": "search"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "units must be positive"
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "code": "handler_failed"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_PW05",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "fail",
+              "productRef": "prd_pw_seq",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794562201000_<random>:fail",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794562201000_<random>",
+                "toolName": "search"
+              },
+              "timestamp": "2026-11-13T09:30:01.000Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

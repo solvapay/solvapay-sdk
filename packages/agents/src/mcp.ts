@@ -172,6 +172,9 @@ export function createAgentMcpRoute(
       )
     }
     const call: AgentRequest = { request, agent: identity.agent, agentToken: token }
+    // `responseMode: 'json'` shapes 2026-07-28 exchanges only. A host on the
+    // 2025 protocol goes through the SDK's stateless fallback, which answers a
+    // POST as an event stream; the MCP spec lets a server answer either way.
     const handler = createMcpHandler(() => buildServer(options, call), { responseMode: 'json' })
     return handler.fetch(request)
   }
@@ -202,12 +205,13 @@ async function anonymous(
   build()
   const calls = await toolCalls(request)
   const lazy = options.lazyAuth ?? true
-  const needsAgent = calls.some(call => !lazy || paidNames.has(call.name))
-  if (needsAgent) {
+  const needingAgent = calls.find(call => !lazy || paidNames.has(call.name))
+  if (needingAgent) {
     return authChallenge({
       protectedResource: resource,
       description: 'Sign in to pay for this tool',
-      jsonRpcId: calls[0]?.id ?? null,
+      // The call that needs sign-in, which in a batch may not be the first.
+      jsonRpcId: needingAgent.id ?? null,
     })
   }
   if (/^Bearer\s/i.test(request.headers.get('authorization') ?? '')) return null

@@ -1,0 +1,52 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "handler-gates",
+  "description": "ctx.gate() with no reason stops the call with a payment_required paywall saying \"Payment required\": not an error, the message as text, the gate as structuredContent.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid5",
+      "customerRef": "cus_TLPAID05",
+      "tool": {
+        "name": "quote",
+        "kind": "payable"
+      },
+      "handler": {
+        "gate": null,
+        "respond": {
+          "data": {
+            "unused": true
+          }
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "meterName": "requests"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Payment required"
+        }
+      ],
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_tl_paid5",
+        "checkoutUrl": "",
+        "message": "Payment required"
+      }
+    }
+  }
+}

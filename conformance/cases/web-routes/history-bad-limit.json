@@ -1,0 +1,33 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "history-bad-limit",
+  "description": "history with a limit that isn't a positive integer answers 400.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/history",
+      "user": {
+        "id": "user_hi2",
+        "email": "user_hi2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "query": {
+        "productRef": "prd_conform1",
+        "limit": "0"
+      },
+      "api": []
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 400,
+      "body": {
+        "error": "limit must be a positive integer"
+      },
+      "apiCalls": []
+    }
+  }
+}

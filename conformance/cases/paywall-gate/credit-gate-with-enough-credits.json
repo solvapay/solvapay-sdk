@@ -1,0 +1,94 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "credit-gate-with-enough-credits",
+  "description": "A credit-based gate the API refused although the balance covers the cost is still topup_required (the API is authoritative): 0 short, and the paid plans are offered to switch to.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_pw_gate",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 5,
+        "creditBalance": 50,
+        "creditsPerUnit": 10,
+        "plans": [
+          {
+            "reference": "pln_pw_max",
+            "name": "Max",
+            "price": 4900,
+            "currency": "usd",
+            "type": "recurring",
+            "requiresPayment": true,
+            "checkoutUrl": "https://checkout.conformance.test/s/max"
+          },
+          {
+            "reference": "pln_pw_pro",
+            "name": "Pro [annual]",
+            "price": 1900,
+            "currency": "usd",
+            "type": "recurring",
+            "requiresPayment": true,
+            "checkoutUrl": "https://checkout.conformance.test/s/pro"
+          },
+          {
+            "reference": "pln_pw_free",
+            "name": "Free",
+            "price": 0,
+            "currency": "usd",
+            "type": "recurring",
+            "requiresPayment": false,
+            "freeUnits": 3
+          }
+        ],
+        "checkoutUrl": "https://checkout.conformance.test/s/8"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_pw_gate",
+      "checkoutUrl": "https://checkout.conformance.test/s/8",
+      "message": "Out of credits for this call. Balance 50 credits; this call costs 10 credits — 0 short. [Add credits](https://checkout.conformance.test/s/8) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. Or switch plan: [Pro \\[annual\\]](https://checkout.conformance.test/s/pro) · [Max](https://checkout.conformance.test/s/max) (first link used closes the rest; links expire in 15 minutes).",
+      "plans": [
+        {
+          "reference": "pln_pw_max",
+          "name": "Max",
+          "price": 4900,
+          "currency": "usd",
+          "type": "recurring",
+          "requiresPayment": true,
+          "checkoutUrl": "https://checkout.conformance.test/s/max"
+        },
+        {
+          "reference": "pln_pw_pro",
+          "name": "Pro [annual]",
+          "price": 1900,
+          "currency": "usd",
+          "type": "recurring",
+          "requiresPayment": true,
+          "checkoutUrl": "https://checkout.conformance.test/s/pro"
+        },
+        {
+          "reference": "pln_pw_free",
+          "name": "Free",
+          "price": 0,
+          "currency": "usd",
+          "type": "recurring",
+          "requiresPayment": false,
+          "freeUnits": 3
+        }
+      ],
+      "creditBalance": 50,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "creditsPerCall": 10,
+      "shortfallCredits": 0,
+      "remainingCalls": 5,
+      "links": {
+        "checkout": "https://checkout.conformance.test/s/8"
+      }
+    }
+  }
+}

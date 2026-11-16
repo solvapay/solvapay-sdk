@@ -1,0 +1,80 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "activation-required",
+  "description": "activationRequired gives an activation_required gate whose checkoutUrl is the confirmation URL, with plans, balance and product attached.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "free",
+        "checkoutUrl": "https://pay.example.com/checkout",
+        "activationRequired": true,
+        "confirmationUrl": "https://pay.example.com/confirm",
+        "plans": [
+          {
+            "reference": "pln_usage",
+            "name": "Usage",
+            "type": "usage-based",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": false
+          }
+        ],
+        "balance": {
+          "creditBalance": 100,
+          "remainingUnits": 100,
+          "creditsPerUnit": 1
+        },
+        "product": {
+          "name": "API",
+          "ref": "prd_x",
+          "provider": "acme"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "activation_required",
+      "product": "prd_x",
+      "message": "Your plan needs activation. [Open checkout](https://pay.example.com/confirm) to activate (expires in 15 minutes), or call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`.",
+      "checkoutUrl": "https://pay.example.com/confirm",
+      "confirmationUrl": "https://pay.example.com/confirm",
+      "balance": {
+        "creditBalance": 100,
+        "remainingUnits": 100,
+        "creditsPerUnit": 1
+      },
+      "productDetails": {
+        "name": "API",
+        "ref": "prd_x",
+        "provider": "acme"
+      },
+      "planRef": "free",
+      "plans": [
+        {
+          "reference": "pln_usage",
+          "name": "Usage",
+          "type": "usage-based",
+          "price": 0,
+          "currency": "USD",
+          "requiresPayment": false
+        }
+      ],
+      "creditBalance": 100,
+      "reason": "activation_required",
+      "nextAction": "activate",
+      "creditsPerCall": 1,
+      "shortfallCredits": 0,
+      "remainingCalls": 100,
+      "links": {
+        "checkout": "https://pay.example.com/checkout",
+        "manage": "https://pay.example.com/confirm"
+      }
+    }
+  }
+}

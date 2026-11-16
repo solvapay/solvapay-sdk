@@ -1,0 +1,50 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-get-history-credit-activity-fails",
+  "description": "History whose credit activity the API cannot load answers the API's 500, even though the purchases loaded.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "get_history",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {},
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases",
+          "body": {
+            "purchases": []
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/credits/activity",
+          "status": 500,
+          "body": {
+            "statusCode": 500,
+            "message": "Internal server error",
+            "error": "Internal Server Error"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 500,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

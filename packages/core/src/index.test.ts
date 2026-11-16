@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { SolvaPayError } from './index'
+import { afterEach, describe, expect, it } from 'vitest'
+import { getSolvaPayConfig, SolvaPayError } from './index'
 
 describe('SolvaPayError', () => {
   it('constructs with only a message (backwards compatible)', () => {
@@ -27,5 +27,19 @@ describe('SolvaPayError', () => {
     const err = new SolvaPayError('forbidden', { status: 403, code: 'forbidden' })
     expect(err.status).toBe(403)
     expect(err.code).toBe('forbidden')
+  })
+})
+
+describe('getSolvaPayConfig', () => {
+  const original = process.env.SOLVAPAY_SECRET_KEY
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.SOLVAPAY_SECRET_KEY
+    else process.env.SOLVAPAY_SECRET_KEY = original
+  })
+
+  it('codes a missing secret key missing_secret, as the Python SDK does', () => {
+    delete process.env.SOLVAPAY_SECRET_KEY
+    expect(() => getSolvaPayConfig()).toThrow(expect.objectContaining({ code: 'missing_secret' }))
   })
 })

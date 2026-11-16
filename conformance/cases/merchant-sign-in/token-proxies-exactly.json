@@ -1,0 +1,167 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "token-proxies-exactly",
+  "description": "The token and revoke endpoints forward the raw form body (so `+`, `%20` and `~` in a PKCE verifier reach SolvaPay unchanged), its content type and the client's Basic credentials. A successful answer comes back as it is, with its Cache-Control and Pragma; an empty 200 from revoke stays empty. Any method but POST and OPTIONS is a 404.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_token",
+      "publicBaseUrl": "https://mcp-si.conformance.test",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded",
+            "authorization": "Basic Y2xpX3NpX3Rva2VuOnNlY3JldA=="
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_token_1&code_verifier=a+b%20c~._-dEf&redirect_uri=cursor%3A%2F%2Fanysphere.cursor-retrieval%2Foauth%2Fcallback&client_id=cli_si_token"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=refresh_token&refresh_token=sir_token_1&client_id=cli_si_token"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/revoke",
+          "headers": {
+            "origin": "vscode://vscode.github-authentication",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "token=sir_token_1&token_type_hint=refresh_token"
+        },
+        {
+          "path": "/oauth/token"
+        },
+        {
+          "path": "/oauth/revoke"
+        }
+      ],
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "body": {
+            "access_token": "sia_token_1",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+            "refresh_token": "sir_token_1",
+            "scope": "openid profile email"
+          },
+          "headers": {
+            "cache-control": "no-store",
+            "pragma": "no-cache"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "body": {
+            "access_token": "sia_token_2",
+            "token_type": "Bearer",
+            "expires_in": 3600
+          },
+          "headers": {
+            "cache-control": "no-store"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/revoke",
+          "status": 200,
+          "text": ""
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin",
+            "cache-control": "no-store",
+            "pragma": "no-cache"
+          },
+          "body": {
+            "access_token": "sia_token_1",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+            "refresh_token": "sir_token_1",
+            "scope": "openid profile email"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json",
+            "cache-control": "no-store"
+          },
+          "body": {
+            "access_token": "sia_token_2",
+            "token_type": "Bearer",
+            "expires_in": 3600
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "vscode://vscode.github-authentication",
+            "vary": "Origin"
+          },
+          "body": null
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        }
+      ],
+      "apiCalls": [
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded",
+            "authorization": "Basic Y2xpX3NpX3Rva2VuOnNlY3JldA=="
+          },
+          "body": "grant_type=authorization_code&code=sic_token_1&code_verifier=a+b%20c~._-dEf&redirect_uri=cursor%3A%2F%2Fanysphere.cursor-retrieval%2Foauth%2Fcallback&client_id=cli_si_token"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=refresh_token&refresh_token=sir_token_1&client_id=cli_si_token"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/revoke",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "token=sir_token_1&token_type_hint=refresh_token"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-already-active",
+  "description": "An already active plan with enough credits just says so.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "already_active",
+        "creditBalance": 5000,
+        "creditsPerUnit": 200
+      }
+    }
+  },
+  "expect": {
+    "result": "This plan is already active."
+  }
+}

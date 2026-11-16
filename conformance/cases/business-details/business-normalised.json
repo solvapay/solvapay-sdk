@@ -1,0 +1,31 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "business-details",
+  "case": "business-normalised",
+  "description": "A business purchase is trimmed and upper-cased, the tax ID loses its spaces and gets its type, an unsupported billing country falls back to the business country, and blank state is dropped.",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "businessName": "  Acme Ltd ",
+      "country": " gb ",
+      "customerCountry": "zz",
+      "customerName": "  Ada Lovelace ",
+      "customerState": "   ",
+      "customerPostalCode": " SW1A 1AA ",
+      "taxId": " gb 123 456 789 "
+    }
+  },
+  "expect": {
+    "result": {
+      "isBusiness": true,
+      "country": "GB",
+      "customerCountry": "GB",
+      "businessName": "Acme Ltd",
+      "taxId": "GB123456789",
+      "taxIdType": "gb_vat",
+      "customerName": "Ada Lovelace",
+      "customerPostalCode": "SW1A 1AA"
+    }
+  }
+}

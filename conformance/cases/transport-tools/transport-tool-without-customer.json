@@ -1,0 +1,32 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "transport-tool-without-customer",
+  "description": "A transport tool with no signed-in customer is a 401 tool error.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "get_history",
+      "productRef": "prd_conform1",
+      "customerRef": null,
+      "arguments": {},
+      "api": []
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "customer_ref missing from MCP auth context"
+        }
+      ],
+      "structuredContent": {
+        "error": "Unauthorized",
+        "status": 401,
+        "details": "customer_ref missing from MCP auth context"
+      },
+      "isError": true
+    }
+  }
+}

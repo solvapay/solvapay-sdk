@@ -1,0 +1,35 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "attach-business-details-unsupported-billing-country",
+  "description": "A consumer's billing country must be one Stripe Tax calculates for.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "attach_business_details",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "paymentIntentId": "pi_1",
+        "isBusiness": false,
+        "customerCountry": "XX"
+      },
+      "api": []
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Billing country is not supported for tax calculation"
+        }
+      ],
+      "structuredContent": {
+        "error": "Billing country is not supported for tax calculation",
+        "status": 400
+      },
+      "isError": true
+    }
+  }
+}

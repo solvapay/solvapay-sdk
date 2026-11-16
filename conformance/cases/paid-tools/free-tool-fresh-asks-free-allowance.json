@@ -1,0 +1,114 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "free-tool-fresh-asks-free-allowance",
+  "description": "A free tool's handler sees its free-allowance snapshot, and ctx.customer.fresh() asks the same free-allowance question again.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid9",
+      "customerRef": "cus_TLPAID09",
+      "tool": {
+        "name": "lookup",
+        "kind": "free",
+        "freeLimit": {
+          "cap": 3,
+          "scope": "lifetime",
+          "meter": "free-lookups"
+        }
+      },
+      "handler": {
+        "fresh": true,
+        "respond": {
+          "data": {
+            "found": true
+          },
+          "echo": true
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 2,
+            "meterName": "free-lookups"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 1,
+            "meterName": "free-lookups"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_tl",
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "found": true,
+            "customer": {
+              "ref": "cus_TLPAID09",
+              "isCreditBased": false,
+              "remaining": 2,
+              "withinLimits": true,
+              "overage": false,
+              "plan": null
+            },
+            "freshCustomer": {
+              "ref": "cus_TLPAID09",
+              "isCreditBased": false,
+              "remaining": 1,
+              "withinLimits": true,
+              "overage": false,
+              "plan": null
+            },
+            "product": {
+              "reference": "prd_tl_paid9",
+              "name": "prd_tl_paid9"
+            }
+          }
+        }
+      ],
+      "structuredContent": {
+        "found": true,
+        "customer": {
+          "ref": "cus_TLPAID09",
+          "isCreditBased": false,
+          "remaining": 2,
+          "withinLimits": true,
+          "overage": false,
+          "plan": null
+        },
+        "freshCustomer": {
+          "ref": "cus_TLPAID09",
+          "isCreditBased": false,
+          "remaining": 1,
+          "withinLimits": true,
+          "overage": false,
+          "plan": null
+        },
+        "product": {
+          "reference": "prd_tl_paid9",
+          "name": "prd_tl_paid9"
+        }
+      }
+    }
+  }
+}

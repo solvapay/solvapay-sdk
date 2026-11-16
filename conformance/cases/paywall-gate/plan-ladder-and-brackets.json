@@ -1,0 +1,72 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "plan-ladder-and-brackets",
+  "description": "The plan ladder links the cheapest paid plans first, escapes brackets in plan names, and states the link expiry once.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "",
+        "checkoutUrl": "https://pay.example.com/checkout",
+        "plans": [
+          {
+            "reference": "pln_big",
+            "name": "Big [team]",
+            "type": "recurring",
+            "price": 50000,
+            "currency": "JPY",
+            "requiresPayment": true,
+            "checkoutUrl": "https://pay.example.com/c/big"
+          },
+          {
+            "reference": "pln_small",
+            "name": "Small",
+            "type": "recurring",
+            "price": 1500,
+            "currency": "JPY",
+            "requiresPayment": true,
+            "checkoutUrl": "https://pay.example.com/c/small"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "message": "You don't have an active plan for this tool. Pick a plan to use this tool: [Small](https://pay.example.com/c/small) · [Big \\[team\\]](https://pay.example.com/c/big) (first link used closes the rest; links expire in 15 minutes), or call the `account` tool with view: 'checkout'. Call the `account` tool with view: 'account' for usage and recovery.",
+      "plans": [
+        {
+          "reference": "pln_big",
+          "name": "Big [team]",
+          "type": "recurring",
+          "price": 50000,
+          "currency": "JPY",
+          "requiresPayment": true,
+          "checkoutUrl": "https://pay.example.com/c/big"
+        },
+        {
+          "reference": "pln_small",
+          "name": "Small",
+          "type": "recurring",
+          "price": 1500,
+          "currency": "JPY",
+          "requiresPayment": true,
+          "checkoutUrl": "https://pay.example.com/c/small"
+        }
+      ],
+      "reason": "upgrade_required",
+      "nextAction": "checkout",
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}

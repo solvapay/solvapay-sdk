@@ -1,0 +1,59 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "authorize-redirects",
+  "description": "The authorize endpoint redirects (302) to SolvaPay's sign-in with the client's query string exactly as sent (PKCE challenge, redirect URI, state, scope and resource unchanged, `+` and `%20` included), mirroring a native origin. With no query there is no `?`. A POST is a 404.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_authorize",
+      "publicBaseUrl": "https://mcp-si.conformance.test",
+      "requests": [
+        {
+          "path": "/oauth/authorize?response_type=code&client_id=cli_si_authorize&redirect_uri=cursor%3A%2F%2Fanysphere.cursor-retrieval%2Foauth%2Fcallback&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&state=a+b%20c&scope=openid+profile+email&resource=https%3A%2F%2Fmcp-si.conformance.test",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval"
+          }
+        },
+        {
+          "path": "/oauth/authorize"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/authorize",
+          "body": {}
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 302,
+          "headers": {
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin",
+            "location": "https://api.conformance.test/v1/customer/auth/authorize?response_type=code&client_id=cli_si_authorize&redirect_uri=cursor%3A%2F%2Fanysphere.cursor-retrieval%2Foauth%2Fcallback&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&state=a+b%20c&scope=openid+profile+email&resource=https%3A%2F%2Fmcp-si.conformance.test"
+          },
+          "body": null
+        },
+        {
+          "status": 302,
+          "headers": {
+            "location": "https://api.conformance.test/v1/customer/auth/authorize"
+          },
+          "body": null
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

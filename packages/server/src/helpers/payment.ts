@@ -416,6 +416,14 @@ export async function attachBusinessDetailsCore(
       }
     }
 
+    // The details go on the verified user's own customer: a customerRef in
+    // the body is never trusted, so a caller can't attach details to someone
+    // else's payment.
+    const customerResult = await syncCustomerCore(request, { solvaPay: options.solvaPay })
+    if (isErrorResult(customerResult)) {
+      return customerResult
+    }
+
     const solvaPay = options.solvaPay || createSolvaPay()
 
     if (typeof solvaPay.attachBusinessDetails !== 'function') {
@@ -428,17 +436,13 @@ export async function attachBusinessDetailsCore(
     const details = validation.data
     const result = await solvaPay.attachBusinessDetails({
       paymentIntentId: body.paymentIntentId,
-      ...(body.customerRef !== undefined && { customerRef: body.customerRef }),
+      customerRef: customerResult,
       ...details,
     })
 
     return result
   } catch (error) {
-    return handleRouteError(
-      error,
-      'Attach business details',
-      'Failed to attach business details',
-    )
+    return handleRouteError(error, 'Attach business details', 'Failed to attach business details')
   }
 }
 

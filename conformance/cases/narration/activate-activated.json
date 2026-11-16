@@ -1,0 +1,18 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-activated",
+  "description": "A successful activation names the plan.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "activated",
+        "planName": "Free"
+      }
+    }
+  },
+  "expect": {
+    "result": "Activated Free. Paid tools are available now."
+  }
+}

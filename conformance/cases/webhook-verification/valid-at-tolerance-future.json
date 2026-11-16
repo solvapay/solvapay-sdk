@@ -1,0 +1,35 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "webhook-verification",
+  "case": "valid-at-tolerance-future",
+  "description": "A signature exactly 300 seconds ahead (clock skew) is still inside the window.",
+  "input": {
+    "fn": "verifyWebhook",
+    "args": {
+      "body": "{\"id\":\"evt_0123456789abcdef\",\"type\":\"purchase.created\",\"created\":1794484800,\"api_version\":\"2025-10-01\",\"data\":{\"object\":{\"reference\":\"pur_ABC12345\",\"status\":\"active\"},\"previous_attributes\":null},\"livemode\":false,\"request\":{\"id\":null,\"idempotency_key\":null}}",
+      "signature": "t=1794485100,v1=898e1f76a81b6bf3f21a058a2162991dc93251d18276d9d04c0419b9fc21331b",
+      "secret": "whsec_conformance_0123456789abcdef0123456789abcdef"
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "id": "evt_0123456789abcdef",
+      "type": "purchase.created",
+      "created": 1794484800,
+      "api_version": "2025-10-01",
+      "data": {
+        "object": {
+          "reference": "pur_ABC12345",
+          "status": "active"
+        },
+        "previous_attributes": null
+      },
+      "livemode": false,
+      "request": {
+        "id": null,
+        "idempotency_key": null
+      }
+    }
+  }
+}

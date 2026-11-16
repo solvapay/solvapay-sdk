@@ -1,0 +1,90 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "emitted-blocks-and-own-nudge",
+  "description": "Blocks queued with ctx.emit come first; with dataInText false the data is not repeated as text; a nudge with its own message uses it, and with empty text the nudge is the whole first block.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid4",
+      "customerRef": "cus_TLPAID04",
+      "tool": {
+        "name": "chart",
+        "kind": "payable"
+      },
+      "handler": {
+        "emit": [
+          {
+            "type": "text",
+            "text": "Rendering the chart…"
+          },
+          {
+            "type": "image",
+            "data": "iVBORw0KGgo=",
+            "mimeType": "image/png"
+          }
+        ],
+        "respond": {
+          "data": {
+            "points": 3
+          },
+          "text": "",
+          "dataInText": false,
+          "nudge": {
+            "kind": "cycle-ending",
+            "message": "Your plan renews in 2 days."
+          }
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 40,
+            "meterName": "requests"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_tl",
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Rendering the chart…"
+        },
+        {
+          "type": "image",
+          "data": "iVBORw0KGgo=",
+          "mimeType": "image/png"
+        },
+        {
+          "type": "text",
+          "text": "Your plan renews in 2 days."
+        },
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "solvapay://nudge",
+            "mimeType": "text/plain",
+            "text": "Your plan renews in 2 days."
+          }
+        }
+      ],
+      "structuredContent": {
+        "points": 3
+      }
+    }
+  }
+}

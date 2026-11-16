@@ -1,0 +1,134 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "credit-balance-fresh-snapshot",
+  "description": "On a credit-based plan ctx.customer carries the balance; ctx.customer.fresh() asks the API again for a new snapshot; a low-balance nudge without a message falls back to the top-up copy.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid3",
+      "customerRef": "cus_TLPAID03",
+      "tool": {
+        "name": "research",
+        "kind": "payable"
+      },
+      "handler": {
+        "fresh": true,
+        "respond": {
+          "data": {
+            "report": "ok"
+          },
+          "echo": true,
+          "nudge": {
+            "kind": "low-balance"
+          }
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 3,
+            "meterName": "requests",
+            "creditBalance": 30,
+            "creditsPerUnit": 10,
+            "currency": "USD"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 2,
+            "meterName": "requests",
+            "creditBalance": 20,
+            "creditsPerUnit": 10,
+            "currency": "USD"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_tl",
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"report\":\"ok\",\"customer\":{\"ref\":\"cus_TLPAID03\",\"balance\":30,\"isCreditBased\":true,\"remaining\":3,\"withinLimits\":true,\"overage\":false,\"plan\":null},\"freshCustomer\":{\"ref\":\"cus_TLPAID03\",\"balance\":20,\"isCreditBased\":true,\"remaining\":2,\"withinLimits\":true,\"overage\":false,\"plan\":null},\"product\":{\"reference\":\"prd_tl_paid3\",\"name\":\"prd_tl_paid3\"}}\n\nHeads up — running low on credits. Call the `account` tool with view: 'topup' to add more."
+        },
+        {
+          "type": "text",
+          "json": {
+            "report": "ok",
+            "customer": {
+              "ref": "cus_TLPAID03",
+              "balance": 30,
+              "isCreditBased": true,
+              "remaining": 3,
+              "withinLimits": true,
+              "overage": false,
+              "plan": null
+            },
+            "freshCustomer": {
+              "ref": "cus_TLPAID03",
+              "balance": 20,
+              "isCreditBased": true,
+              "remaining": 2,
+              "withinLimits": true,
+              "overage": false,
+              "plan": null
+            },
+            "product": {
+              "reference": "prd_tl_paid3",
+              "name": "prd_tl_paid3"
+            }
+          }
+        },
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "solvapay://nudge",
+            "mimeType": "text/plain",
+            "text": "Heads up — running low on credits. Call the `account` tool with view: 'topup' to add more."
+          }
+        }
+      ],
+      "structuredContent": {
+        "report": "ok",
+        "customer": {
+          "ref": "cus_TLPAID03",
+          "balance": 30,
+          "isCreditBased": true,
+          "remaining": 3,
+          "withinLimits": true,
+          "overage": false,
+          "plan": null
+        },
+        "freshCustomer": {
+          "ref": "cus_TLPAID03",
+          "balance": 20,
+          "isCreditBased": true,
+          "remaining": 2,
+          "withinLimits": true,
+          "overage": false,
+          "plan": null
+        },
+        "product": {
+          "reference": "prd_tl_paid3",
+          "name": "prd_tl_paid3"
+        }
+      }
+    }
+  }
+}

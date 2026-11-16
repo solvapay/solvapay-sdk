@@ -1,0 +1,206 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-calls",
+  "case": "client-goes-away-while-waiting",
+  "description": "The caller goes away while the owner decides: the wait ends early, the next authorize asks for the whole seconds left, and the call is refused as approval_client_closed; a caller already gone is refused after the first waiting answer.",
+  "setup": {
+    "productRef": "prd_ac_calls",
+    "agentCalls": {
+      "maxWaitSeconds": 10
+    }
+  },
+  "steps": [
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_25",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        },
+        "clientGoneAfterSeconds": 2.5
+      },
+      "clock": "2026-11-13T12:00:00.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC25",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC25",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 5
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC25",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC25",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 5
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "approval_client_closed",
+            "message": "Waiting for the owner to approve this call."
+          },
+          "log": [
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_25",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC25",
+                "approvalRef": "apr_AC25"
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_25",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "approval_client_closed",
+                "callRef": "call_AC25",
+                "approvalRef": "apr_AC25"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_25",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 10
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_25",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 7
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_26",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        },
+        "clientGoneAfterSeconds": 0
+      },
+      "clock": "2026-11-13T12:00:20.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC26",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC26",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 5
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "approval_client_closed",
+            "message": "Waiting for the owner to approve this call."
+          },
+          "log": [
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_26",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "approval_client_closed",
+                "callRef": "call_AC26",
+                "approvalRef": "apr_AC26"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_26",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 10
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -51,4 +51,9 @@ describe('requireProductRef', () => {
     expect(() => requireProductRef()).toThrow(/SOLVAPAY_PRODUCT_REF/)
     expect(() => requireProductRef()).toThrow(/npx solvapay doctor/)
   })
+
+  it('codes the error missing_product, as the Python SDK does', () => {
+    delete process.env.SOLVAPAY_PRODUCT_REF
+    expect(() => requireProductRef()).toThrow(expect.objectContaining({ code: 'missing_product' }))
+  })
 })

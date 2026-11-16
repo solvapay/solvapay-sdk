@@ -75,6 +75,8 @@ async function createTask(req: NextRequest) {
 export const POST = payable.next(createTask)
 ```
 
+`payable.next()` acts for the user your middleware puts in `x-user-id` (see the authentication section below), or the subject of a bearer token it can verify (`SOLVAPAY_JWT_SECRET`, `SOLVAPAY_JWKS_URL`, or Supabase's). It looks that user's customer up by `externalRef`. A request with neither is anonymous. To decide yourself, pass `getCustomerRef`.
+
 ### Using Next.js Helpers
 
 The `@solvapay/next` package provides route-wrapper helpers that handle auth, body parsing, error formatting, and cache invalidation. Every wrapper returns `Promise<NextResponse>` — `return` it directly from your route handler.

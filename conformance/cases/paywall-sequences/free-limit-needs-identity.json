@@ -1,0 +1,179 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "free-limit-needs-identity",
+  "description": "A free allowance needs a signed-in customer: anonymous is refused before any API call. A real customer is looked up, the allowance is sent with the limits check, and usage carries the free meter.",
+  "setup": {
+    "productRef": "prd_sequences"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "anonymous",
+        "freeLimit": {
+          "meter": "free-searches",
+          "cap": 3,
+          "scope": "rolling_window",
+          "windowDays": 30
+        }
+      },
+      "api": [],
+      "expect": {
+        "error": {
+          "code": "identity_required"
+        },
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-12T12:00:00.100Z",
+      "args": {
+        "customerRef": "user_seq_08",
+        "handler": "succeed",
+        "toolName": "search",
+        "freeLimit": {
+          "meter": "free-searches",
+          "cap": 3,
+          "scope": "rolling_window",
+          "windowDays": 30
+        }
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_SEQ08",
+            "email": "user_seq_08@example.com",
+            "name": "Ada",
+            "externalRef": "user_seq_08"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 3,
+            "plan": "Pro",
+            "meterName": "free-searches",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true
+        },
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_seq_08"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ08",
+              "productRef": "prd_sequences",
+              "meterName": "free-searches",
+              "includeCheckoutSession": true,
+              "freeAllowance": {
+                "meter": "free-searches",
+                "cap": 3,
+                "scope": "rolling_window",
+                "windowDays": 30
+              }
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ08",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800100_<random>:success",
+              "metadata": {
+                "action": "free-searches",
+                "requestId": "solvapay_1794484800100_<random>",
+                "toolName": "search",
+                "meterName": "free-searches"
+              },
+              "timestamp": "2026-11-12T12:00:00.100Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-12T12:00:00.200Z",
+      "args": {
+        "customerRef": "user_seq_08",
+        "handler": "succeed",
+        "toolName": "search",
+        "freeLimit": {
+          "meter": "free-searches",
+          "cap": 3,
+          "scope": "rolling_window",
+          "windowDays": 30
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ08",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800200_<random>:success",
+              "metadata": {
+                "action": "free-searches",
+                "requestId": "solvapay_1794484800200_<random>",
+                "toolName": "search",
+                "meterName": "free-searches"
+              },
+              "timestamp": "2026-11-12T12:00:00.200Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

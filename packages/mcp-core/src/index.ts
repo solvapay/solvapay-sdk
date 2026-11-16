@@ -191,6 +191,13 @@ export type {
 
 // ---- Auth info + bearer helpers ----
 export { buildAuthInfoFromBearer } from './auth-bridge'
+export {
+  createSolvaPayTokenVerifier,
+  verifyAuthInfoFromBearer,
+  type SolvaPayTokenVerifier,
+  type SolvaPayTokenVerifierOptions,
+  type VerifiedCustomer,
+} from './verify-bearer'
 export type { BuildAuthInfoFromBearerOptions } from './auth-bridge'
 
 export {

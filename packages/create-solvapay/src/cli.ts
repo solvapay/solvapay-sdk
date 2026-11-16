@@ -9,6 +9,7 @@
  */
 
 import { resolve } from 'node:path'
+import { isPreviewBuild } from '@solvapay/init'
 import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import {
@@ -24,7 +25,8 @@ import { PACKAGE_VERSION, printVersionBanner } from './version-banner'
 
 async function main(): Promise<void> {
   const rawArgv = process.argv.slice(2)
-  const args = parseArgs(rawArgv)
+  // A preview scaffolder pins preview SDKs; a stable one, stable SDKs.
+  const args = { ...parseArgs(rawArgv), preview: isPreviewBuild(PACKAGE_VERSION) }
 
   if (args.version) {
     process.stdout.write(`${PACKAGE_VERSION}\n`)
@@ -99,6 +101,18 @@ async function main(): Promise<void> {
       return
     }
     typeId = await promptProjectType()
+  }
+
+  if (
+    args.language &&
+    typeId !== 'mcp' &&
+    !['ts', 'typescript'].includes(args.language.toLowerCase())
+  ) {
+    process.stderr.write(
+      `--language ${args.language} is only available with --type mcp. ${typeId} is TypeScript only.\n`,
+    )
+    process.exitCode = 2
+    return
   }
 
   const factory = PROJECT_TYPES[typeId]

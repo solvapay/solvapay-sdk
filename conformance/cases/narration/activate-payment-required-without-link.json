@@ -1,0 +1,18 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-payment-required-without-link",
+  "description": "A paid plan with no checkout URL still points at the checkout view.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "payment_required",
+        "planName": "Pro"
+      }
+    }
+  },
+  "expect": {
+    "result": "Pro requires payment. Call `account` with view: 'checkout' to pay."
+  }
+}

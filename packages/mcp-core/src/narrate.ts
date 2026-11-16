@@ -30,6 +30,8 @@ import {
   isZeroDecimalCurrency,
   meterName,
   planPricingShape,
+  tierBands,
+  tierMeters,
   trialDays,
   usageRate,
   type PricingOptionLike,
@@ -186,9 +188,17 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000
 
 function meterUnit(meter: string | null | undefined, count: number): string {
   if (meter && meter !== 'requests') {
-    return count === 1 && meter.endsWith('s') ? meter.slice(0, -1) : meter
+    return count === 1 ? singular(meter) : meter
   }
   return count === 1 ? 'call' : 'calls'
+}
+
+/** One unit of a plural meter name: `searches` → `search`, `queries` → `query`. */
+function singular(word: string): string {
+  if (/[^aeiou]ies$/i.test(word)) return `${word.slice(0, -3)}y`
+  if (/(ch|sh|ss|x|z)es$/i.test(word)) return word.slice(0, -2)
+  if (/[^s]s$/i.test(word)) return word.slice(0, -1)
+  return word
 }
 
 function activePurchase(data: BootstrapPayload): PurchaseShape | null {
@@ -405,6 +415,10 @@ type NarratorPlanShape =
 function isPaidPlan(plan: PlanShape | PlanSnapshotShape): boolean {
   if ('requiresPayment' in plan && plan.requiresPayment === false) return false
   if (charges(plan).some(charge => charge.amountMinor > 0)) return true
+  // A plan priced only in tier bands has no flat or per-unit charge.
+  if (tierMeters(plan).some(meter => tierBands(plan, meter).some(t => t.charge.amountMinor > 0))) {
+    return true
+  }
   return (plan.price ?? 0) > 0
 }
 
@@ -498,6 +512,14 @@ function resolveNarratorAccountState(input: {
   return 'A'
 }
 
+/** How often a plan bills, for a sentence with no price: `every year`, `every 3 months`. */
+function cadencePhrase(plan: PlanShape | PlanSnapshotShape | null | undefined): string | null {
+  const cycle = billingCycle(plan)
+  if (!cycle) return null
+  const count = cycle.count ?? 1
+  return count === 1 ? `every ${cycle.interval}` : `every ${count} ${cycle.interval}s`
+}
+
 function intervalPhrase(plan: PlanShape | PlanSnapshotShape | null | undefined): string | null {
   const cycle = billingCycle(plan)
   if (!cycle) return null
@@ -575,7 +597,7 @@ function catalogFragment(plan: PlanShape, customer: CustomerShape | null | undef
     core = price
       ? `${name} is ${price}${interval ? ` ${interval}` : ''}${allowance}`
       : interval
-        ? `${name} is ${interval}`
+        ? `${name} is billed ${cadencePhrase(plan) ?? interval}${allowance}`
         : name
   }
 
@@ -632,23 +654,30 @@ function activateRecovery(planRef: string): string {
   return `To continue, call \`${MCP_TOOL_NAMES.activatePlan}\` with planRef: "${planRef}".`
 }
 
-function recoveryForState(state: NarratorAccountState, freePlanRef?: string | null): string {
+/**
+ * The one call that unblocks a customer who can't call a paid tool, or null
+ * when nothing blocks them. A funded or within-allowance customer gets no
+ * recovery line: "To continue, call …" reads as a block, and the body already
+ * names the optional next step (top up, switch plan, reactivate).
+ */
+function recoveryForState(
+  state: NarratorAccountState,
+  freePlanRef?: string | null,
+): string | null {
   switch (state) {
     case 'A':
-      return recoveryLine(['checkout'])
-    case 'B':
-      return recoveryLine(['topup'])
-    case 'C':
-    case 'E':
     case 'F':
-    case 'I':
       return recoveryLine(['checkout'])
     case 'D':
       return recoveryLine(['topup', 'checkout'])
     case 'H':
       return freePlanRef ? activateRecovery(freePlanRef) : recoveryLine(['checkout'])
+    case 'B':
+    case 'C':
+    case 'E':
+    case 'I':
     case 'J':
-      return recoveryLine(['account'])
+      return null
   }
 }
 
@@ -930,8 +959,8 @@ export function narrateManageAccount(
     const checkout = checkoutRow(data)
     if (checkout) lines.push(checkout)
   }
-  lines.push('')
-  lines.push(recoveryForState(state, free?.reference))
+  const recovery = recoveryForState(state, free?.reference)
+  if (recovery) lines.push('', recovery)
 
   const links: NarratorOutput['links'] = []
   const portal = hostedPortalLink(data)

@@ -1,0 +1,33 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "activate-plan-blank-plan-ref",
+  "description": "activate_plan with a blank planRef is refused with 400, before the customer is checked.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "activate_plan",
+      "productRef": "prd_tl_tools",
+      "customerRef": null,
+      "arguments": {
+        "planRef": "   "
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Pass `planRef` to activate a specific plan. To list plans, call `account` with view: \"checkout\"."
+        }
+      ],
+      "structuredContent": {
+        "error": "activate_plan requires a planRef",
+        "status": 400,
+        "details": "Pass `planRef` to activate a specific plan. To list plans, call `account` with view: \"checkout\"."
+      },
+      "isError": true
+    }
+  }
+}

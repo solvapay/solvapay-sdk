@@ -1,0 +1,42 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "credits-without-cost-at-zero-remaining",
+  "description": "Credits on the account but no per-call cost and nothing remaining is a topup gate, with the remaining calls taken from remaining.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_pw_gate",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "balance": {
+          "creditBalance": 1500,
+          "creditsPerMinorUnit": 100,
+          "displayExchangeRate": 1,
+          "displayCurrency": "USD"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_pw_gate",
+      "checkoutUrl": "",
+      "message": "Included usage is exhausted. Call the `account` tool with view: 'topup'. Or call the `account` tool with view: 'checkout' to pick a plan.",
+      "balance": {
+        "creditBalance": 1500,
+        "creditsPerMinorUnit": 100,
+        "displayExchangeRate": 1,
+        "displayCurrency": "USD"
+      },
+      "creditBalance": 1500,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "remainingCalls": 0,
+      "creditsPerMinorUnit": 100,
+      "displayExchangeRate": 1
+    }
+  }
+}

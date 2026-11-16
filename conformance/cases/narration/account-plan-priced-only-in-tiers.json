@@ -1,0 +1,75 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-plan-priced-only-in-tiers",
+  "description": "A plan priced only in tier bands is a paid plan: it is narrated with its first band's rate, never as requiring no payment.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "auto",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_research",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_research",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_nr_banded",
+            "name": "Banded",
+            "type": "usage-based",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "tier",
+                "from": 0,
+                "to": 1000,
+                "mode": "graduated",
+                "charge": {
+                  "per": "unit",
+                  "amountMinor": 5,
+                  "currency": "USD",
+                  "meter": "requests"
+                }
+              },
+              {
+                "kind": "tier",
+                "from": 1000,
+                "to": null,
+                "mode": "graduated",
+                "charge": {
+                  "per": "unit",
+                  "amountMinor": 3,
+                  "currency": "USD",
+                  "meter": "requests"
+                }
+              }
+            ]
+          }
+        ],
+        "customer": null,
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Welcome to Stock Research**\n\nStock Research has no plan yet. Banded is from $0.05 per call · planRef: pln_nr_banded. Reply with a plan name to activate it.\n\nTo continue, call `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "tool-descriptors",
+  "case": "hidden-ui-tools-one-view-custom-csp",
+  "description": "hideToolsByAudience ['ui'] leaves the six widget tools out of tools/list for a non-ChatGPT client; with views ['checkout'] the account tool's view enum is just checkout and only /upgrade and /activate_plan are listed; CSP overrides are appended after the defaults without repeating a domain already there.",
+  "input": {
+    "fn": "describeServer",
+    "args": {
+      "productRef": "prd_tl_catalog",
+      "views": ["checkout"],
+      "hideToolsByAudience": ["ui"],
+      "csp": {
+        "resourceDomains": ["https://cdn.merchant.test"],
+        "connectDomains": ["https://api.stripe.com", "https://api.merchant.test"],
+        "frameDomains": ["https://pay.merchant.test"]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "tools": [
+        {
+          "name": "account",
+          "title": "Account",
+          "description": "Call when the user says \"upgrade\", \"change plan\", \"buy\", \"subscribe\", \"my account\", \"current plan\", \"cancel\", \"billing\", \"top up\", \"add credits\", or \"buy credits\". Opens the SolvaPay billing surface. Pass `view` to pick the landing screen; omit it to let the server pick (no plan → checkout, out of credits → topup, else account). Read-only snapshot — charges happen after the customer confirms. Always include the Manage and Checkout markdown links from the tool result in your reply to the user. To change something, call this tool again with `view`: `account` (manage or cancel), `topup` (add credits), or `checkout` (change plan).",
+          "annotations": {
+            "openWorldHint": true,
+            "readOnlyHint": true,
+            "idempotentHint": true
+          },
+          "_meta": {
+            "ui": {
+              "resourceUri": "ui://conformance/mcp-app.html"
+            },
+            "ui/resourceUri": "ui://conformance/mcp-app.html"
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["ui", "text", "auto"],
+                "description": "Default `mode: 'auto'` returns a self-sufficient text summary (plan, price, https checkout URL) and still opens the iframe on UI hosts. Pass `mode: 'text'` to strip the iframe, or `mode: 'ui'` for a one-line placeholder that still includes the checkout URL."
+              },
+              "view": {
+                "type": "string",
+                "enum": ["checkout"],
+                "description": "Landing surface. checkout: user says \"upgrade\", \"change plan\", \"buy\", or \"subscribe\". account: user says \"my account\", \"current plan\", \"cancel\", or \"billing\". topup: user says \"top up\", \"add credits\", or \"buy credits\". Omit to let the server pick (no plan → checkout, out of credits → topup, else account)."
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "activate_plan",
+          "title": "Activate plan",
+          "description": "Call when the user says \"activate\" and a specific `planRef` is known. Free plans activate immediately; usage-based plans activate when the balance covers usage; paid plans open checkout. Requires `planRef` — to list or pick a plan, call `account` with view: \"checkout\".",
+          "annotations": {
+            "openWorldHint": true,
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true
+          },
+          "_meta": {
+            "openai/widgetAccessible": true
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "planRef": {
+                "type": "string",
+                "description": "Plan to activate. Required."
+              },
+              "productRef": {
+                "type": "string"
+              }
+            },
+            "required": ["planRef"]
+          }
+        }
+      ],
+      "prompts": [
+        {
+          "name": "activate_plan",
+          "title": "Activate plan",
+          "description": "Activate a specific plan by ref, or list plans to pick from.",
+          "arguments": [
+            {
+              "name": "planRef",
+              "required": false
+            }
+          ]
+        },
+        {
+          "name": "upgrade",
+          "title": "Upgrade plan",
+          "description": "Start or change a paid plan for the current customer.",
+          "arguments": [
+            {
+              "name": "planRef",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "resources": [
+        {
+          "uri": "docs://solvapay/overview.md",
+          "name": "SolvaPay MCP — overview",
+          "title": "SolvaPay overview",
+          "description": "Agent-facing \"start here\" doc — explains the two intent tools, dual-audience fallback, and auth model before any tool is called.",
+          "mimeType": "text/markdown"
+        },
+        {
+          "uri": "solvapay://bootstrap.json",
+          "name": "SolvaPay bootstrap",
+          "title": "SolvaPay bootstrap",
+          "description": "Current merchant/product/plans/customer snapshot for the embedded UI. Widgets read this idempotently when the host scrubs structuredContent from tool results.",
+          "mimeType": "application/json"
+        },
+        {
+          "uri": "ui://conformance/mcp-app.html",
+          "name": "ui://conformance/mcp-app.html",
+          "mimeType": "text/html;profile=mcp-app",
+          "_meta": {
+            "ui": {
+              "csp": {
+                "resourceDomains": [
+                  "https://js.stripe.com",
+                  "https://*.stripe.com",
+                  "https://b.stripecdn.com",
+                  "https://assets.claude.ai",
+                  "https://cdn.merchant.test",
+                  "https://api.conformance.test"
+                ],
+                "connectDomains": [
+                  "https://api.stripe.com",
+                  "https://m.stripe.com",
+                  "https://r.stripe.com",
+                  "https://q.stripe.com",
+                  "https://errors.stripe.com",
+                  "https://api.merchant.test",
+                  "https://api.conformance.test"
+                ],
+                "frameDomains": [
+                  "https://js.stripe.com",
+                  "https://hooks.stripe.com",
+                  "https://pay.merchant.test"
+                ]
+              },
+              "prefersBorder": true
+            }
+          }
+        }
+      ]
+    }
+  }
+}

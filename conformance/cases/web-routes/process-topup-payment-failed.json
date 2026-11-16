@@ -1,0 +1,85 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "process-topup-payment-failed",
+  "description": "process-topup-payment reports a failed payment as failed.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/process-topup-payment",
+      "user": {
+        "id": "user_tp2",
+        "email": "user_tp2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "paymentIntentId": "pi_topup1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_tp2@example.com",
+            "externalRef": "user_tp2"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1/balance",
+          "body": {
+            "customerRef": "cus_conform1",
+            "credits": 0,
+            "displayCurrency": "USD",
+            "creditsPerMinorUnit": 100,
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0,
+              "currency": "USD",
+              "formatted": "$0.00",
+              "exchangeRate": 1,
+              "rateSource": "parity"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_topup1/process",
+          "body": {
+            "status": "failed"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "status": "failed"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_tp2"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1/balance"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_topup1/process",
+          "body": {
+            "customerRef": "cus_conform1"
+          }
+        }
+      ]
+    }
+  }
+}

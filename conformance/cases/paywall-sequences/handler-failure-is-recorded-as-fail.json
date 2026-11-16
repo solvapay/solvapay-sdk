@@ -1,0 +1,123 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "handler-failure-is-recorded-as-fail",
+  "description": "A handler that fails records a fail event and the error reaches the caller; the next call uses the cached unit and records success.",
+  "setup": {
+    "productRef": "prd_sequences"
+  },
+  "steps": [
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "cus_SEQ06",
+        "handler": "fail",
+        "toolName": "search"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "code": "handler_failed"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ06",
+              "productRef": "prd_sequences",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ06",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "fail",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800000_<random>:fail",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484800000_<random>",
+                "toolName": "search"
+              },
+              "timestamp": "2026-11-12T12:00:00.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-12T12:00:00.100Z",
+      "args": {
+        "customerRef": "cus_SEQ06",
+        "handler": "succeed",
+        "toolName": "search"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ06",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800100_<random>:success",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484800100_<random>",
+                "toolName": "search",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-12T12:00:00.100Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

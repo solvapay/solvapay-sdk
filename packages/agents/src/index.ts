@@ -5,7 +5,7 @@
  * report usage for reconciliation. The spend policy, the classifier, the
  * approval hold, the balance and the settle rules all run in SolvaPay.
  *
- * Private for now; it becomes the preview package once the lab runs on it.
+ * Agent payments are a preview: SolvaPay turns them on per merchant.
  * Protocol-neutral: no route, no Anthropic or MCP types.
  */
 export {
@@ -28,6 +28,7 @@ export {
   AGENT_ENVIRONMENTS,
   AGENT_KEY_PREFIX,
   AgentApiError,
+  agentRefusal,
   AUTHORIZE_WAIT_MAX_SECONDS,
   createSolvaPayAgentClient,
   parseAuthorizeResponse,

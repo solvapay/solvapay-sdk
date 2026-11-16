@@ -1,0 +1,37 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "refusal-statuses",
+  "description": "The HTTP status an agent API answers each refusal with: 401 for an agent SolvaPay did not accept, 502 when it could not be reached, 422 for a policy deny, 402 for everything money or the owner can settle.",
+  "input": {
+    "fn": "agentRefusalStatuses",
+    "args": {
+      "reasons": [
+        "agent_not_accepted",
+        "unavailable",
+        "deny",
+        "customer_not_linked",
+        "topup_required",
+        "ask",
+        "approval_declined",
+        "approval_expired",
+        "approval_timed_out",
+        "approval_client_closed"
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "agent_not_accepted": 401,
+      "unavailable": 502,
+      "deny": 422,
+      "customer_not_linked": 402,
+      "topup_required": 402,
+      "ask": 402,
+      "approval_declined": 402,
+      "approval_expired": 402,
+      "approval_timed_out": 402,
+      "approval_client_closed": 402
+    }
+  }
+}

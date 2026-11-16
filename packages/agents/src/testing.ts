@@ -129,6 +129,8 @@ export class FakeAgentApi implements SolvaPayAgentClient {
   waitingMessage = 'Approval apr_TESTAPR1 for more budget is waiting for your owner.'
   /** An HTTP status for authorize to fail with. */
   failAuthorize: number | null = null
+  /** The error code SolvaPay's body carries with failAuthorize, if any. */
+  failAuthorizeCode: string | undefined = undefined
   /** An HTTP status for complete to fail with. */
   failComplete: number | null = null
   readonly authorizes: AuthorizeInput[] = []
@@ -168,6 +170,7 @@ export class FakeAgentApi implements SolvaPayAgentClient {
       throw new AgentApiError(
         `POST /v1/sdk/agent/calls failed (${this.failAuthorize})`,
         this.failAuthorize,
+        this.failAuthorizeCode,
       )
     }
     const callRef =

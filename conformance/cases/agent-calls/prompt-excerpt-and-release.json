@@ -1,0 +1,437 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-calls",
+  "case": "prompt-excerpt-and-release",
+  "description": "The prompt's end (its last 1,500 UTF-16 code units, as SolvaPay measures it) goes only when the agent's token says the owner opted in, with toolError; release completes as an upstream failure (502, no cost) with the reason; a finish with no cost and an empty interruption sends cost null and no interrupted.",
+  "setup": {
+    "productRef": "prd_ac_calls",
+    "agentCalls": {
+      "maxWaitSeconds": 0
+    }
+  },
+  "steps": [
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_02",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": true,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        },
+        "prompt": {
+          "text": "Earlier turns. Earlier turns. Earlier turns. Earlier turns. Earlier turns. Earlier turns. Earlier turns. xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx the last words",
+          "toolError": true
+        }
+      },
+      "clock": "2026-11-13T12:00:00.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_AC02",
+            "reservation": {
+              "held": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "allow",
+            "callRef": "call_AC02",
+            "item": "claude-haiku-4-5",
+            "estimate": {
+              "amount": "0.005142",
+              "currency": "USD"
+            },
+            "reservation": {
+              "held": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          },
+          "log": [
+            {
+              "event": "call.allowed",
+              "fields": {
+                "requestId": "req_ac_02",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC02"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_02",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "promptHash": "sha256:3bafc2ad1d556235c1038b49bd92a828431d60c19ef962bb9193ecedc8333896",
+              "toolError": true,
+              "promptExcerpt": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx the last words",
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "releaseCall",
+      "args": {
+        "requestId": "req_ac_02",
+        "reason": "client closed before the upstream call"
+      },
+      "clock": "2026-11-13T12:00:01.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_AC02/complete",
+          "body": {
+            "callRef": "call_AC02",
+            "settled": false,
+            "source": "none",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": null,
+          "log": []
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls/call_AC02/complete",
+            "body": {
+              "status": 502,
+              "cost": null,
+              "interrupted": "client closed before the upstream call"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_03",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": true,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        },
+        "prompt": {
+          "text": "a😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+        }
+      },
+      "clock": "2026-11-13T12:00:02.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_AC03",
+            "reservation": {
+              "held": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "allow",
+            "callRef": "call_AC03",
+            "item": "claude-haiku-4-5",
+            "estimate": {
+              "amount": "0.005142",
+              "currency": "USD"
+            },
+            "reservation": {
+              "held": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          },
+          "log": [
+            {
+              "event": "call.allowed",
+              "fields": {
+                "requestId": "req_ac_03",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC03"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_03",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "promptHash": "sha256:303c8b0bd008a2a474a0f6942d94beb795c24f880347717da2a24fafec064418",
+              "toolError": false,
+              "promptExcerpt": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "finishCall",
+      "args": {
+        "requestId": "req_ac_03",
+        "status": 200,
+        "cost": null,
+        "interrupted": ""
+      },
+      "clock": "2026-11-13T12:00:03.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_AC03/complete",
+          "body": {
+            "callRef": "call_AC03",
+            "settled": true,
+            "source": "provisional",
+            "amount": {
+              "amount": "0.005142",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "callRef": "call_AC03",
+            "settled": true,
+            "source": "provisional",
+            "amount": {
+              "amount": "0.005142",
+              "currency": "USD"
+            },
+            "duplicate": false
+          },
+          "log": []
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls/call_AC03/complete",
+            "body": {
+              "status": 200,
+              "cost": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_04",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        },
+        "prompt": {
+          "text": "Earlier turns. Earlier turns. Earlier turns. Earlier turns. Earlier turns. Earlier turns. Earlier turns. xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx the last words"
+        }
+      },
+      "clock": "2026-11-13T12:00:04.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_AC04",
+            "reservation": {
+              "held": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "allow",
+            "callRef": "call_AC04",
+            "item": "claude-haiku-4-5",
+            "estimate": {
+              "amount": "0.005142",
+              "currency": "USD"
+            },
+            "reservation": {
+              "held": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          },
+          "log": [
+            {
+              "event": "call.allowed",
+              "fields": {
+                "requestId": "req_ac_04",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC04"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_04",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "promptHash": "sha256:3bafc2ad1d556235c1038b49bd92a828431d60c19ef962bb9193ecedc8333896",
+              "toolError": false,
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "finishCall",
+      "args": {
+        "requestId": "req_ac_04",
+        "status": 200,
+        "cost": {
+          "amount": 0.0021,
+          "currency": "USD"
+        },
+        "interrupted": "stream closed by the client"
+      },
+      "clock": "2026-11-13T12:00:05.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_AC04/complete",
+          "body": {
+            "callRef": "call_AC04",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.0021",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "callRef": "call_AC04",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.0021",
+              "currency": "USD"
+            },
+            "duplicate": false
+          },
+          "log": []
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls/call_AC04/complete",
+            "body": {
+              "status": 200,
+              "cost": {
+                "amount": "0.0021",
+                "currency": "USD"
+              },
+              "interrupted": "stream closed by the client"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

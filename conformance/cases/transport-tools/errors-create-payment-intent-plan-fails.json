@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-create-payment-intent-plan-fails",
+  "description": "A plan payment intent the API rejects with a list of validation messages answers 400.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purpose": "plan",
+        "planRef": "pln_ec_pro"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": ["planRef must be a plan of this product", "currency must be USD"],
+            "error": "Bad Request"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 400,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "auto-recharge-get",
+  "description": "GET auto-recharge returns the user's auto-recharge settings.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/auto-recharge",
+      "user": {
+        "id": "user_ar1",
+        "email": "user_ar1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_ar1@example.com",
+            "externalRef": "user_ar1"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/auto-recharge",
+          "body": {
+            "config": {
+              "enabled": true,
+              "trigger": {
+                "type": "balance",
+                "thresholdAmountMinor": 500
+              },
+              "topup": {
+                "mode": "fixed",
+                "amountMinor": 2000,
+                "currency": "USD"
+              },
+              "fundingSourceType": "card",
+              "status": "active",
+              "failureCount": 0,
+              "monthlySpendMinor": 0,
+              "updatedAt": "2026-10-14T12:00:00Z"
+            },
+            "validation": {
+              "maxAmountMajor": 10000,
+              "stripeMinimumMinorByCurrency": {
+                "USD": 50
+              }
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "config": {
+          "enabled": true,
+          "trigger": {
+            "type": "balance",
+            "thresholdAmountMinor": 500
+          },
+          "topup": {
+            "mode": "fixed",
+            "amountMinor": 2000,
+            "currency": "USD"
+          },
+          "fundingSourceType": "card",
+          "status": "active",
+          "failureCount": 0,
+          "monthlySpendMinor": 0,
+          "updatedAt": "2026-10-14T12:00:00Z"
+        },
+        "validation": {
+          "maxAmountMajor": 10000,
+          "stripeMinimumMinorByCurrency": {
+            "USD": 50
+          }
+        }
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_ar1"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/auto-recharge",
+          "query": "customerRef=cus_conform1"
+        }
+      ]
+    }
+  }
+}

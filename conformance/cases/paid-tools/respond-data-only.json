@@ -1,0 +1,61 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "respond-data-only",
+  "description": "A paid call within its limits runs the handler; ctx.respond(data) alone answers with one text block holding the data as JSON and the data as structuredContent, and the usage is recorded.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid1",
+      "customerRef": "cus_TLPAID01",
+      "tool": {
+        "name": "quote",
+        "kind": "payable"
+      },
+      "handler": {
+        "respond": {
+          "data": {
+            "symbol": "ACME",
+            "price": 101.5
+          }
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 12,
+            "meterName": "requests"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_tl",
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "symbol": "ACME",
+            "price": 101.5
+          }
+        }
+      ],
+      "structuredContent": {
+        "symbol": "ACME",
+        "price": 101.5
+      }
+    }
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-no-plan-catalog-recurring-shapes",
+  "description": "With no plan yet the catalog reads each recurring plan by its shape: a trial with a multi-month cycle and an allowance, an unlimited allowance (cap 0), and no allowance at all.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "text",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_nr_shapes",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_shapes",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_nr_trial",
+            "name": "Starter",
+            "type": "recurring",
+            "price": 900,
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month",
+                "count": 3
+              },
+              {
+                "kind": "trial",
+                "days": 7
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 1000,
+                "onExceed": "block"
+              }
+            ],
+            "currency": "USD"
+          },
+          {
+            "reference": "pln_nr_unl",
+            "name": "Unlimited",
+            "type": "recurring",
+            "price": 4900,
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 4900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 0,
+                "onExceed": "block"
+              }
+            ],
+            "currency": "USD"
+          },
+          {
+            "reference": "pln_nr_basic",
+            "name": "Basic",
+            "type": "recurring",
+            "price": 500,
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "week"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 500,
+                "currency": "USD"
+              }
+            ],
+            "currency": "USD"
+          }
+        ],
+        "customer": {
+          "ref": "cus_NR14",
+          "email": null,
+          "name": null,
+          "purchase": {
+            "customerRef": "cus_NR14",
+            "purchases": []
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": null,
+          "usage": null,
+          "limits": null
+        },
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Welcome to Stock Research**\n\nStock Research has no plan yet. Starter is $9 every 3 months for 1,000 calls · 7-day trial · planRef: pln_nr_trial, Unlimited is $49 a month for unlimited · planRef: pln_nr_unl, Basic is $5 a week · planRef: pln_nr_basic. Reply with a plan name to activate it.\nSigned in as: cus_NR14\n\nTo continue, call `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

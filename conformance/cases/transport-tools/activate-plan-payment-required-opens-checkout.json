@@ -1,0 +1,95 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "activate-plan-payment-required-opens-checkout",
+  "description": "A paid plan answers payment_required without a link: the tool opens a hosted checkout for that plan on the product given, and names the plan from the product's plans.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "activate_plan",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL08",
+      "arguments": {
+        "planRef": "pln_tl_pro",
+        "productRef": "prd_tl_other"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/activate",
+          "body": {
+            "status": "payment_required",
+            "productRef": "prd_tl_other",
+            "planRef": "pln_tl_pro"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "body": {
+            "sessionId": "cs_tl8",
+            "checkoutUrl": "https://checkout.conformance.test/s/tl8"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_tl_other/plans",
+          "body": {
+            "plans": [
+              {
+                "reference": "pln_tl_free",
+                "name": "Free",
+                "type": "recurring",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": false,
+                "price": 0,
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              },
+              {
+                "reference": "pln_tl_pro",
+                "name": "Pro",
+                "type": "recurring",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": true,
+                "price": 2900,
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Pro requires payment. [Open checkout](https://checkout.conformance.test/s/tl8) (expires in 15 minutes), or Call `account` with view: 'checkout' to pay."
+        }
+      ],
+      "structuredContent": {
+        "status": "payment_required",
+        "productRef": "prd_tl_other",
+        "planRef": "pln_tl_pro",
+        "checkoutUrl": "https://checkout.conformance.test/s/tl8"
+      }
+    }
+  }
+}

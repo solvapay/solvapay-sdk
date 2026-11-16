@@ -1,0 +1,144 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "last-unit-blocks-once-from-cache",
+  "description": "With one unit left, the call that uses it is allowed, the next is gated from the cache without asking the API, and the one after that asks the API again.",
+  "setup": {
+    "productRef": "prd_sequences"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "cus_SEQ02"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 1,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_SEQ02"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ02",
+              "productRef": "prd_sequences",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.500Z",
+      "args": {
+        "customerRef": "cus_SEQ02"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "gate",
+          "customerRef": "cus_SEQ02",
+          "gate": {
+            "kind": "payment_required",
+            "product": "prd_sequences",
+            "checkoutUrl": "https://checkout.conformance.test/s/1",
+            "message": "You've reached the included usage for this period. [Open checkout](https://checkout.conformance.test/s/1) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+            "planRef": "Pro",
+            "meterName": "requests",
+            "reason": "limit_reached",
+            "nextAction": "checkout",
+            "remainingCalls": 0,
+            "links": {
+              "checkout": "https://checkout.conformance.test/s/1"
+            }
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ02",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "paywall",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800500_<random>:paywall",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484800500_<random>"
+              },
+              "timestamp": "2026-11-12T12:00:00.500Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:01.000Z",
+      "args": {
+        "customerRef": "cus_SEQ02"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_SEQ02"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ02",
+              "productRef": "prd_sequences",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

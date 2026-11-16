@@ -81,6 +81,8 @@ type RequestHeaders = Headers | Record<string, string | string[] | undefined>
  */
 export interface ApplyHideToolsByAudienceExtra {
   requestInfo?: Request | { headers?: RequestHeaders } | undefined
+  /** MCP SDK v2 request handlers get the HTTP request here. */
+  http?: { req?: Request } | undefined
   [key: string]: unknown
 }
 
@@ -120,6 +122,10 @@ function readHeader(headers: RequestHeaders | undefined, name: string): string |
 }
 
 function readUserAgentFromContext(ctx: ApplyHideToolsByAudienceContext): string | undefined {
+  const httpReq = ctx.extra?.http?.req
+  if (httpReq instanceof Request) {
+    return httpReq.headers.get('user-agent') ?? undefined
+  }
   const requestInfo = ctx.extra?.requestInfo
   if (requestInfo instanceof Request) {
     return requestInfo.headers.get('user-agent') ?? undefined

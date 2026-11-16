@@ -257,7 +257,8 @@ describe('buildPayableHandler — ctx.respond V1', () => {
         limits: {
           withinLimits: true,
           remaining: 7,
-          plan: 'pro',
+          // The API reports the active plan as `planRef`.
+          planRef: 'pln_pro',
           creditBalance: 1234,
         },
       })
@@ -285,7 +286,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
         ref: expect.stringContaining('ctx_user'),
         balance: 1234,
         withinLimits: true,
-        plan: expect.objectContaining({ reference: 'pro' }),
+        plan: expect.objectContaining({ reference: 'pln_pro' }),
       })
       // The paywall pre-decrements one unit from `remaining` before
       // handing off to the handler, so the surfaced value is 6 not 7.

@@ -1,0 +1,18 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-invalid-with-message",
+  "description": "An invalid planRef passes the API's message through.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "invalid",
+        "message": "Plan pln_x does not belong to this product."
+      }
+    }
+  },
+  "expect": {
+    "result": "Plan pln_x does not belong to this product."
+  }
+}

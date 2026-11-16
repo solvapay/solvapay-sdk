@@ -1,0 +1,150 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "anonymous-caller",
+  "description": "An anonymous caller is never looked up or created: limits are checked for 'anonymous', and both the gate's paywall event and a later call's success event (on the API's meter name) are recorded for 'anonymous'.",
+  "setup": {
+    "productRef": "prd_pw_seq"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:10:00.000Z",
+      "args": {
+        "customerRef": "anonymous"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": false,
+            "remaining": 0,
+            "checkoutUrl": "https://checkout.conformance.test/s/anon"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_pw_2",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "gate",
+          "customerRef": "anonymous",
+          "gate": {
+            "kind": "payment_required",
+            "product": "prd_pw_seq",
+            "checkoutUrl": "https://checkout.conformance.test/s/anon",
+            "message": "You don't have an active plan for this tool. [Open checkout](https://checkout.conformance.test/s/anon) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+            "reason": "upgrade_required",
+            "nextAction": "checkout",
+            "remainingCalls": 0,
+            "links": {
+              "checkout": "https://checkout.conformance.test/s/anon"
+            }
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "anonymous",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "anonymous",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "paywall",
+              "productRef": "prd_pw_seq",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794561000000_<random>:paywall",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794561000000_<random>"
+              },
+              "timestamp": "2026-11-13T09:10:00.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-13T09:10:01.000Z",
+      "args": {
+        "customerRef": "anonymous",
+        "handler": "succeed",
+        "toolName": "preview"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 2,
+            "meterName": "previews"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_pw_3",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "anonymous",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "anonymous",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_pw_seq",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794561001000_<random>:success",
+              "metadata": {
+                "action": "previews",
+                "requestId": "solvapay_1794561001000_<random>",
+                "toolName": "preview",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-13T09:10:01.000Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

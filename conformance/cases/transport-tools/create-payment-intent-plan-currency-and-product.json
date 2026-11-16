@@ -1,0 +1,57 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-payment-intent-plan-currency-and-product",
+  "description": "A plan payment intent passes the currency and the product given, and leaves accountId out when the API has none.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL11",
+      "arguments": {
+        "purpose": "plan",
+        "planRef": "pln_tl_pro",
+        "productRef": "prd_tl_other",
+        "currency": "EUR"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "body": {
+            "processorPaymentId": "pi_tl11",
+            "clientSecret": "pi_tl11_secret",
+            "publishableKey": "pk_test_tl",
+            "amount": 2500,
+            "currency": "eur",
+            "status": "requires_payment_method",
+            "customerRef": "cus_TL11",
+            "planRef": "pln_tl_pro"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "processorPaymentId": "pi_tl11",
+            "clientSecret": "pi_tl11_secret",
+            "publishableKey": "pk_test_tl",
+            "customerRef": "cus_TL11"
+          }
+        }
+      ],
+      "structuredContent": {
+        "processorPaymentId": "pi_tl11",
+        "clientSecret": "pi_tl11_secret",
+        "publishableKey": "pk_test_tl",
+        "customerRef": "cus_TL11"
+      }
+    }
+  }
+}

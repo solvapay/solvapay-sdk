@@ -1,0 +1,268 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "merchant-tools-listed",
+  "description": "What a host lists for a merchant's own tools: the paid hint or the free allowance appended to the description (trailing space trimmed; a tool with none gets the hint alone), read-only and open-world annotations unless the merchant overrides one, the input schema from either a field map or an object schema, `_meta` as given, plus the flat `ui/resourceUri` key when it names a UI resource. A free tool with no signed-in customer answers 401 without calling SolvaPay, as SolvaPay's own tools do (get_history).",
+  "input": {
+    "fn": "merchantTools",
+    "args": {
+      "productRef": "prd_si_tools",
+      "tools": [
+        {
+          "name": "quote",
+          "kind": "payable",
+          "title": "Quote",
+          "description": "Latest price for a symbol.  ",
+          "input": {
+            "symbol": {
+              "type": "string",
+              "description": "Ticker symbol"
+            },
+            "depth": {
+              "type": "number",
+              "description": "Order book levels",
+              "optional": true
+            }
+          },
+          "inputAs": "shape",
+          "meta": {
+            "ui": {
+              "resourceUri": "ui://conformance/mcp-app.html"
+            },
+            "openai/outputTemplate": "ui://conformance/mcp-app.html"
+          }
+        },
+        {
+          "name": "news",
+          "kind": "payable",
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false
+          },
+          "input": {
+            "topic": {
+              "type": "string"
+            },
+            "fresh": {
+              "type": "boolean",
+              "optional": true
+            }
+          },
+          "inputAs": "object",
+          "meta": {
+            "category": "research"
+          }
+        },
+        {
+          "name": "search",
+          "kind": "free",
+          "description": "Search the archive.",
+          "freeLimit": {
+            "meter": "FREE-Searches",
+            "cap": 3,
+            "scope": "lifetime"
+          },
+          "input": {
+            "query": {
+              "type": "string",
+              "description": "What to look for"
+            },
+            "limit": {
+              "type": "number",
+              "optional": true
+            }
+          }
+        },
+        {
+          "name": "browse",
+          "kind": "free",
+          "freeLimit": {
+            "cap": 5,
+            "scope": "rolling_window",
+            "windowDays": 7
+          },
+          "meta": {
+            "ui": {
+              "resourceUri": "ui://conformance/mcp-app.html"
+            }
+          },
+          "customerRef": null
+        },
+        {
+          "name": "archive",
+          "kind": "free",
+          "description": "Read the archive.",
+          "freeLimit": {
+            "meter": "free-archive",
+            "cap": 10,
+            "scope": "rolling_window",
+            "windowDays": 30
+          },
+          "input": {
+            "year": {
+              "type": "number",
+              "description": "Which year"
+            }
+          },
+          "inputAs": "object"
+        }
+      ],
+      "calls": [
+        {
+          "name": "browse"
+        },
+        {
+          "name": "get_history"
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "tools": [
+        {
+          "name": "archive",
+          "description": "Read the archive. Free tool — 10 calls per 30 days, then a plan is required. Call `account` for remaining usage.",
+          "annotations": {
+            "readOnlyHint": true,
+            "openWorldHint": true
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "year": {
+                "type": "number",
+                "description": "Which year"
+              }
+            },
+            "required": ["year"]
+          }
+        },
+        {
+          "name": "browse",
+          "description": "Free tool — 5 calls per 7 days, then a plan is required. Call `account` for remaining usage.",
+          "annotations": {
+            "readOnlyHint": true,
+            "openWorldHint": true
+          },
+          "_meta": {
+            "ui": {
+              "resourceUri": "ui://conformance/mcp-app.html"
+            },
+            "ui/resourceUri": "ui://conformance/mcp-app.html"
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+          }
+        },
+        {
+          "name": "news",
+          "description": "Paid tool — call `account` for current balance and cost per call.",
+          "annotations": {
+            "readOnlyHint": false,
+            "openWorldHint": true,
+            "destructiveHint": false
+          },
+          "_meta": {
+            "category": "research"
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "fresh": {
+                "type": "boolean"
+              },
+              "topic": {
+                "type": "string"
+              }
+            },
+            "required": ["topic"]
+          }
+        },
+        {
+          "name": "quote",
+          "title": "Quote",
+          "description": "Latest price for a symbol. Paid tool — call `account` for current balance and cost per call.",
+          "annotations": {
+            "readOnlyHint": true,
+            "openWorldHint": true
+          },
+          "_meta": {
+            "ui": {
+              "resourceUri": "ui://conformance/mcp-app.html"
+            },
+            "openai/outputTemplate": "ui://conformance/mcp-app.html",
+            "ui/resourceUri": "ui://conformance/mcp-app.html"
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "depth": {
+                "type": "number",
+                "description": "Order book levels"
+              },
+              "symbol": {
+                "type": "string",
+                "description": "Ticker symbol"
+              }
+            },
+            "required": ["symbol"]
+          }
+        },
+        {
+          "name": "search",
+          "description": "Search the archive. Free tool — 3 calls per lifetime, then a plan is required. Call `account` for remaining usage.",
+          "annotations": {
+            "readOnlyHint": true,
+            "openWorldHint": true
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "number"
+              },
+              "query": {
+                "type": "string",
+                "description": "What to look for"
+              }
+            },
+            "required": ["query"]
+          }
+        }
+      ],
+      "calls": [
+        {
+          "content": [
+            {
+              "type": "text",
+              "text": "customer_ref missing from MCP auth context"
+            }
+          ],
+          "structuredContent": {
+            "error": "Unauthorized",
+            "status": 401,
+            "details": "customer_ref missing from MCP auth context"
+          },
+          "isError": true
+        },
+        {
+          "content": [
+            {
+              "type": "text",
+              "text": "customer_ref missing from MCP auth context"
+            }
+          ],
+          "structuredContent": {
+            "error": "Unauthorized",
+            "status": 401,
+            "details": "customer_ref missing from MCP auth context"
+          },
+          "isError": true
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "discovery-documents",
+  "description": "The well-known documents an MCP client discovers sign-in from: the protected-resource document and the authorization-server metadata (this server as issuer, its own /oauth endpoints, S256, the openid scopes), both built from a public base URL whose trailing slash is dropped. OpenID configuration is a 404, as is any other path or method. A native client's origin (cursor://, vscode-webview://, claude://) is mirrored with Vary: Origin; a web origin gets no CORS headers.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_discovery",
+      "publicBaseUrl": "https://mcp-si.conformance.test/",
+      "requests": [
+        {
+          "path": "/.well-known/oauth-protected-resource",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval"
+          }
+        },
+        {
+          "path": "/.well-known/oauth-authorization-server",
+          "headers": {
+            "origin": "vscode-webview://4f2a9c"
+          }
+        },
+        {
+          "path": "/.well-known/oauth-authorization-server",
+          "headers": {
+            "origin": "https://attacker.example"
+          }
+        },
+        {
+          "path": "/.well-known/openid-configuration",
+          "headers": {
+            "origin": "claude://claude.ai"
+          }
+        },
+        {
+          "path": "/.well-known/openid-configuration"
+        },
+        {
+          "method": "POST",
+          "path": "/.well-known/openid-configuration",
+          "body": {}
+        },
+        {
+          "method": "POST",
+          "path": "/.well-known/oauth-protected-resource",
+          "body": {}
+        },
+        {
+          "method": "POST",
+          "path": "/.well-known/oauth-authorization-server",
+          "body": {}
+        },
+        {
+          "path": "/favicon.ico"
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "resource": "https://mcp-si.conformance.test",
+            "authorization_servers": ["https://mcp-si.conformance.test"],
+            "scopes_supported": ["openid", "profile", "email"]
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "vscode-webview://4f2a9c",
+            "vary": "Origin"
+          },
+          "body": {
+            "issuer": "https://mcp-si.conformance.test",
+            "authorization_endpoint": "https://mcp-si.conformance.test/oauth/authorize",
+            "token_endpoint": "https://mcp-si.conformance.test/oauth/token",
+            "registration_endpoint": "https://mcp-si.conformance.test/oauth/register",
+            "revocation_endpoint": "https://mcp-si.conformance.test/oauth/revoke",
+            "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post"],
+            "response_types_supported": ["code"],
+            "grant_types_supported": ["authorization_code", "refresh_token"],
+            "scopes_supported": ["openid", "profile", "email"],
+            "code_challenge_methods_supported": ["S256"]
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "issuer": "https://mcp-si.conformance.test",
+            "authorization_endpoint": "https://mcp-si.conformance.test/oauth/authorize",
+            "token_endpoint": "https://mcp-si.conformance.test/oauth/token",
+            "registration_endpoint": "https://mcp-si.conformance.test/oauth/register",
+            "revocation_endpoint": "https://mcp-si.conformance.test/oauth/revoke",
+            "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post"],
+            "response_types_supported": ["code"],
+            "grant_types_supported": ["authorization_code", "refresh_token"],
+            "scopes_supported": ["openid", "profile", "email"],
+            "code_challenge_methods_supported": ["S256"]
+          }
+        },
+        {
+          "status": 404,
+          "headers": {
+            "access-control-allow-origin": "claude://claude.ai",
+            "vary": "Origin"
+          },
+          "body": null
+        },
+        {
+          "status": 404,
+          "headers": {},
+          "body": null
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

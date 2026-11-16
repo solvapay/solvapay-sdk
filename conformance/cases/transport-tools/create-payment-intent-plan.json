@@ -1,0 +1,58 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-payment-intent-plan",
+  "description": "A plan payment intent answers the client secret, publishable key, connected account and customer, and nothing else from the API response.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "purpose": "plan",
+        "planRef": "pln_pro"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "body": {
+            "processorPaymentId": "pi_1",
+            "clientSecret": "pi_1_secret_abc",
+            "publishableKey": "pk_test_1",
+            "accountId": "acct_1",
+            "amount": 2900,
+            "currency": "usd",
+            "status": "requires_payment_method",
+            "customerRef": "cus_conform1",
+            "planRef": "pln_pro"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "processorPaymentId": "pi_1",
+            "clientSecret": "pi_1_secret_abc",
+            "publishableKey": "pk_test_1",
+            "accountId": "acct_1",
+            "customerRef": "cus_conform1"
+          }
+        }
+      ],
+      "structuredContent": {
+        "processorPaymentId": "pi_1",
+        "clientSecret": "pi_1_secret_abc",
+        "publishableKey": "pk_test_1",
+        "accountId": "acct_1",
+        "customerRef": "cus_conform1"
+      }
+    }
+  }
+}

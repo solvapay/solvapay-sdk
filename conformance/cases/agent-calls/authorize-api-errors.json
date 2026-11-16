@@ -1,0 +1,1111 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-calls",
+  "case": "authorize-api-errors",
+  "description": "An authorize the API answers with an error: a 401, or a 403 with no code or with environment_mismatch (SolvaPay did not accept the agent), refuses as agent_not_accepted. A 403 with any other code refuses the merchant, not the agent (feature_not_enabled: agent payments are off; key_env_mismatch: the secret key is for the other environment), so it refuses as unavailable, as does a 403 whose body is not JSON (a proxy's page, not SolvaPay's answer), as every other status does; never let through. Each logs call.authorize_failed with the status.",
+  "setup": {
+    "productRef": "prd_ac_calls",
+    "agentCalls": {
+      "maxWaitSeconds": 0
+    }
+  },
+  "steps": [
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_30",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:00.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 400"
+          },
+          "status": 400
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_30",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 400
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_30",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_30",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_31",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:01.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 401"
+          },
+          "status": 401
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "agent_not_accepted",
+            "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_31",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 401
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_31",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "agent_not_accepted"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_31",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_32",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:02.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 403"
+          },
+          "status": 403
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "agent_not_accepted",
+            "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_32",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 403
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_32",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "agent_not_accepted"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_32",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_32_environment_mismatch",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:02.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "statusCode": 403,
+            "code": "environment_mismatch",
+            "message": "This agent spends in live, and this secret key is for sandbox"
+          },
+          "status": 403
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "agent_not_accepted",
+            "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_32_environment_mismatch",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 403
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_32_environment_mismatch",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "agent_not_accepted"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_32_environment_mismatch",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_32_feature_not_enabled",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:02.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "statusCode": 403,
+            "code": "feature_not_enabled",
+            "message": "Feature \"agent_payments\" is not enabled for this provider",
+            "feature": "agent_payments"
+          },
+          "status": 403
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_32_feature_not_enabled",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 403
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_32_feature_not_enabled",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_32_feature_not_enabled",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_32_key_env_mismatch",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:02.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "statusCode": 403,
+            "code": "key_env_mismatch",
+            "message": "This secret key is for sandbox, and this account is in live"
+          },
+          "status": 403
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_32_key_env_mismatch",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 403
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_32_key_env_mismatch",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_32_key_env_mismatch",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_32_page",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:02.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "status": 403,
+          "rawBody": "<html><body><h1>403 Forbidden</h1></body></html>"
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_32_page",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 403
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_32_page",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_32_page",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_33",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:03.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 404"
+          },
+          "status": 404
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_33",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 404
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_33",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_33",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_34",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:04.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 409"
+          },
+          "status": 409
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_34",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 409
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_34",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_34",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_35",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:05.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 422"
+          },
+          "status": 422
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_35",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 422
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_35",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_35",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_36",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:06.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 429"
+          },
+          "status": 429
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_36",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 429
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_36",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_36",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_37",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:07.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 500"
+          },
+          "status": 500
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_37",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 500
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_37",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_37",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_38",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:08.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 502"
+          },
+          "status": 502
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_38",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 502
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_38",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_38",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_39",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:09.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "message": "error 503"
+          },
+          "status": 503
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "unavailable",
+            "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+          },
+          "log": [
+            {
+              "event": "call.authorize_failed",
+              "fields": {
+                "requestId": "req_ac_39",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "status": 503
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_39",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "unavailable"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_39",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

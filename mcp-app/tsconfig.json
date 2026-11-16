@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["DOM", "ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true
+  },
+  // The widget source is checked by vite's build, as in the examples that
+  // build the same widget (its types drift against @modelcontextprotocol/ext-apps).
+  "include": ["vite.config.ts"]
+}

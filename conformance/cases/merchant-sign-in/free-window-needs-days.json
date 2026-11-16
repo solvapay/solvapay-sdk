@@ -1,0 +1,27 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "free-window-needs-days",
+  "description": "A rolling-window free allowance without its window length is refused at registration.",
+  "input": {
+    "fn": "merchantTools",
+    "args": {
+      "productRef": "prd_si_window",
+      "tools": [
+        {
+          "name": "peek",
+          "kind": "free",
+          "freeLimit": {
+            "cap": 3,
+            "scope": "rolling_window"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "refused": true
+    }
+  }
+}

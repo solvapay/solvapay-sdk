@@ -1,0 +1,122 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "errors-check-limits-fails",
+  "description": "A limits check the API fails fails the decision with the API's code (http_503, then the body's own KEY_ENV_MISMATCH); nothing is cached, so the next call checks again and is allowed.",
+  "setup": {
+    "productRef": "prd_ec_1"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "cus_EC02"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "status": 503,
+          "body": {
+            "statusCode": 503,
+            "message": "Service unavailable",
+            "error": "Service Unavailable"
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "code": "http_503"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_EC02",
+              "productRef": "prd_ec_1",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:01.000Z",
+      "args": {
+        "customerRef": "cus_EC02"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "status": 403,
+          "body": {
+            "statusCode": 403,
+            "message": "This key is for sandbox",
+            "error": "Forbidden",
+            "code": "KEY_ENV_MISMATCH"
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "code": "KEY_ENV_MISMATCH"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_EC02",
+              "productRef": "prd_ec_1",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:02.000Z",
+      "args": {
+        "customerRef": "cus_EC02"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/ec"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_EC02"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_EC02",
+              "productRef": "prd_ec_1",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

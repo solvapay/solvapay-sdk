@@ -1,0 +1,159 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "register-forwards-dcr",
+  "description": "Dynamic client registration is forwarded to SolvaPay for this product (product_ref in the query) with the client's body and content type, and nothing else: an Authorization header stays behind. SolvaPay's answer, success or failure, comes back as it is, never rewritten as an OAuth error; an unreachable SolvaPay is a 502 upstream_unreachable. Any method but POST and OPTIONS is a 404.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_register",
+      "publicBaseUrl": "https://mcp-si.conformance.test",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/oauth/register",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "authorization": "Bearer leftover",
+            "content-type": "application/json"
+          },
+          "rawBody": "{\"client_name\":\"Cursor\",\"redirect_uris\":[\"cursor://anysphere.cursor-retrieval/oauth/callback\"],\"token_endpoint_auth_method\":\"none\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/register",
+          "headers": {
+            "content-type": "application/json; charset=utf-8"
+          },
+          "body": {
+            "client_name": "Claude",
+            "redirect_uris": ["https://claude.ai/api/mcp/auth_callback"]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/register",
+          "headers": {
+            "origin": "https://attacker.example",
+            "content-type": "application/json"
+          },
+          "body": {
+            "client_name": "Web"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/oauth/register"
+        }
+      ],
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/register",
+          "status": 201,
+          "body": {
+            "client_id": "cli_si_register",
+            "client_id_issued_at": 1794312000,
+            "redirect_uris": ["cursor://anysphere.cursor-retrieval/oauth/callback"],
+            "token_endpoint_auth_method": "none"
+          },
+          "headers": {
+            "cache-control": "no-store"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/register",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "Invalid identifier",
+            "error": "Bad Request"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/register",
+          "unreachable": true
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 201,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin",
+            "cache-control": "no-store"
+          },
+          "body": {
+            "client_id": "cli_si_register",
+            "client_id_issued_at": 1794312000,
+            "redirect_uris": ["cursor://anysphere.cursor-retrieval/oauth/callback"],
+            "token_endpoint_auth_method": "none"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "statusCode": 400,
+            "message": "Invalid identifier",
+            "error": "Bad Request"
+          }
+        },
+        {
+          "status": 502,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "error": "upstream_unreachable"
+          }
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        }
+      ],
+      "apiCalls": [
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/register",
+          "query": "product_ref=prd_si_register",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": "{\"client_name\":\"Cursor\",\"redirect_uris\":[\"cursor://anysphere.cursor-retrieval/oauth/callback\"],\"token_endpoint_auth_method\":\"none\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/register",
+          "query": "product_ref=prd_si_register",
+          "headers": {
+            "content-type": "application/json; charset=utf-8"
+          },
+          "body": "{\"client_name\":\"Claude\",\"redirect_uris\":[\"https://claude.ai/api/mcp/auth_callback\"]}"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/register",
+          "query": "product_ref=prd_si_register",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": "{\"client_name\":\"Web\"}"
+        }
+      ]
+    }
+  }
+}

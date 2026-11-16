@@ -172,10 +172,7 @@ function formatCredits(value: number): string {
   return value.toLocaleString('en-US')
 }
 
-function formatCreditsWithMoney(
-  credits: number,
-  gate: PaywallStructuredContent,
-): string {
+function formatCreditsWithMoney(credits: number, gate: PaywallStructuredContent): string {
   const amount = formatCredits(credits)
   const peg = gate.creditsPerMinorUnit
   const currency = gate.currency
@@ -332,7 +329,8 @@ export function buildGateMessage(state: PaywallState, gate: PaywallStructuredCon
     }
     case 'upgrade_required': {
       if (ladder) {
-        return `You don't have an active plan for this tool. Pick a plan to use this tool: ${ladder} (links expire in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer('checkout')}. ${callViewer('account').replace(/^c/, 'C')} for usage and recovery.`
+        // The ladder already states the expiry.
+        return `You don't have an active plan for this tool. Pick a plan to use this tool: ${ladder}, or ${callViewer('checkout')}. ${callViewer('account').replace(/^c/, 'C')} for usage and recovery.`
       }
       return `You don't have an active plan for this tool.${recoverClause(url, 'pick a plan', 'checkout')}`
     }

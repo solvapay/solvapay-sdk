@@ -1,0 +1,63 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "measured-usage-wins",
+  "description": "Measured used and limit from the API take precedence over counters derived from the plan.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 3,
+        "plan": "plan_free",
+        "checkoutUrl": "https://pay.example.com/checkout",
+        "planRef": "plan_free",
+        "used": 2,
+        "limit": 5,
+        "plans": [
+          {
+            "reference": "plan_free",
+            "name": "Free",
+            "type": "hybrid",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": false,
+            "freeUnits": 3
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "message": "You don't have an active plan for this tool. [Open checkout](https://pay.example.com/checkout) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+      "planRef": "plan_free",
+      "plans": [
+        {
+          "reference": "plan_free",
+          "name": "Free",
+          "type": "hybrid",
+          "price": 0,
+          "currency": "USD",
+          "requiresPayment": false,
+          "freeUnits": 3
+        }
+      ],
+      "included": {
+        "total": 5,
+        "used": 2,
+        "remaining": 3
+      },
+      "reason": "upgrade_required",
+      "nextAction": "checkout",
+      "remainingCalls": 3,
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}

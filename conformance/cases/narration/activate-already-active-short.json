@@ -1,0 +1,20 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-already-active-short",
+  "description": "An already active usage plan whose balance does not cover a call states the cost and the shortfall.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "already_active",
+        "planName": "Pay as you go",
+        "creditBalance": 50,
+        "creditsPerUnit": 200
+      }
+    }
+  },
+  "expect": {
+    "result": "Pay as you go is already active. Balance 50 credits; this call costs 200 credits — 150 short. Call the `account` tool with view: 'topup' to add credits."
+  }
+}

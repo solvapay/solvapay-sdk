@@ -1,0 +1,242 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "agent-key-cache",
+  "description": "SolvaPay is asked whose an agent key is once, and the answer is reused for 30 seconds: still at 29.999 s, asked again at exactly 30 s. A refusal (401, revoked) is cached the same way. A 403 carrying environment_mismatch refuses the key as environment_mismatch. SolvaPay failing (500) throws and is not cached, so the next call asks again.",
+  "setup": {
+    "productRef": "prd_ai_identity"
+  },
+  "steps": [
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:00.000Z",
+      "args": {
+        "agentKey": "agk_ai_one"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "body": {
+            "agentRef": "agt_ai_one",
+            "principalRef": "ppl_ai_keys",
+            "promptExcerpt": true,
+            "environment": "sandbox"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true,
+          "agent": {
+            "agentRef": "agt_ai_one",
+            "principalRef": "ppl_ai_keys",
+            "promptExcerpt": true,
+            "environment": "sandbox"
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/keys/verifications",
+            "body": {
+              "agentKey": "agk_ai_one"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:29.999Z",
+      "args": {
+        "agentKey": "agk_ai_one"
+      },
+      "expect": {
+        "result": {
+          "ok": true,
+          "agent": {
+            "agentRef": "agt_ai_one",
+            "principalRef": "ppl_ai_keys",
+            "promptExcerpt": true,
+            "environment": "sandbox"
+          }
+        },
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:30.000Z",
+      "args": {
+        "agentKey": "agk_ai_one"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "status": 401,
+          "body": {
+            "statusCode": 401,
+            "code": "invalid_agent_key",
+            "message": "Agent key revoked"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": false,
+          "reason": "invalid",
+          "detail": "<not compared>"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/keys/verifications",
+            "body": {
+              "agentKey": "agk_ai_one"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:45.000Z",
+      "args": {
+        "agentKey": "agk_ai_one"
+      },
+      "expect": {
+        "result": {
+          "ok": false,
+          "reason": "invalid",
+          "detail": "<not compared>"
+        },
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:45.000Z",
+      "args": {
+        "agentKey": "agk_ai_two"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "status": 403,
+          "body": {
+            "statusCode": 403,
+            "code": "environment_mismatch",
+            "message": "This agent key is for live"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": false,
+          "reason": "environment_mismatch",
+          "detail": "<not compared>"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/keys/verifications",
+            "body": {
+              "agentKey": "agk_ai_two"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:46.000Z",
+      "args": {
+        "agentKey": "agk_ai_three"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "status": 500,
+          "body": {
+            "statusCode": 500,
+            "message": "Internal server error"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "thrown": {
+            "status": 500
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/keys/verifications",
+            "body": {
+              "agentKey": "agk_ai_three"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:46.000Z",
+      "args": {
+        "agentKey": "agk_ai_three"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "body": {
+            "agentRef": "agt_ai_three",
+            "principalRef": "ppl_ai_keys",
+            "promptExcerpt": false,
+            "environment": "live"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true,
+          "agent": {
+            "agentRef": "agt_ai_three",
+            "principalRef": "ppl_ai_keys",
+            "promptExcerpt": false,
+            "environment": "live"
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/keys/verifications",
+            "body": {
+              "agentKey": "agk_ai_three"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:47.000Z",
+      "args": {
+        "agentKey": "agk_ai_two"
+      },
+      "expect": {
+        "result": {
+          "ok": false,
+          "reason": "environment_mismatch",
+          "detail": "<not compared>"
+        },
+        "apiCalls": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "oauth-metadata",
+  "description": "With OAuth on, the route serves the RFC 9728 document for GET at the path-suffixed well-known URL and under the MCP path, public and cacheable: the canonical resource (host lowercased, default port and trailing slash dropped), the agent issuer as authorization server, the one scope, the server name and documentation. Other methods and paths are the merchant's.",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 0,
+        "protectedResource": {
+          "resource": "https://Merchant-AM.test:443/mcp/",
+          "documentation": "https://merchant-am.test/docs/agents"
+        }
+      },
+      "tools": [
+        {
+          "name": "answer",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 0.004,
+              "currency": "USD"
+            },
+            "echo": true
+          }
+        }
+      ],
+      "freeTools": [
+        {
+          "name": "ping",
+          "description": "Answers pong, free for anyone.",
+          "text": "pong"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/.well-known/oauth-protected-resource/mcp"
+        },
+        {
+          "method": "GET",
+          "path": "/mcp/.well-known/oauth-protected-resource"
+        },
+        {
+          "method": "GET",
+          "path": "/.well-known/oauth-protected-resource"
+        },
+        {
+          "method": "POST",
+          "path": "/.well-known/oauth-protected-resource/mcp",
+          "body": {}
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=300"
+          },
+          "body": {
+            "resource": "https://merchant-am.test/mcp",
+            "authorization_servers": ["https://api.solvapay.test/v1/agent"],
+            "scopes_supported": ["usage"],
+            "bearer_methods_supported": ["header"],
+            "resource_name": "am-research",
+            "resource_documentation": "https://merchant-am.test/docs/agents"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=300"
+          },
+          "body": {
+            "resource": "https://merchant-am.test/mcp",
+            "authorization_servers": ["https://api.solvapay.test/v1/agent"],
+            "scopes_supported": ["usage"],
+            "bearer_methods_supported": ["header"],
+            "resource_name": "am-research",
+            "resource_documentation": "https://merchant-am.test/docs/agents"
+          }
+        },
+        {
+          "merchant": true
+        },
+        {
+          "merchant": true
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

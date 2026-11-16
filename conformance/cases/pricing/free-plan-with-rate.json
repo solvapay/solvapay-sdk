@@ -1,0 +1,116 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "pricing",
+  "case": "free-plan-with-rate",
+  "description": "A plan that requires no payment is free whatever it carries, but still reports its cycle and its per-unit rate; one-time flat charges are its headline only when it has no recurring one; a balance with no peg gives no credits per call.",
+  "input": {
+    "fn": "planPricing",
+    "args": {
+      "plan": {
+        "requiresPayment": false,
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "week"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 500,
+            "currency": "gbp",
+            "oneTime": true
+          },
+          {
+            "kind": "charge",
+            "per": "seat",
+            "amountMinor": 300,
+            "currency": "GBP"
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 4,
+            "currency": "GBP",
+            "meter": "searches"
+          },
+          {
+            "kind": "limit",
+            "cap": 25
+          }
+        ]
+      },
+      "balance": {
+        "displayCurrency": "GBP"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "charges": [
+        {
+          "per": "flat",
+          "amountMinor": 500,
+          "currency": "gbp",
+          "oneTime": true
+        },
+        {
+          "per": "seat",
+          "amountMinor": 300,
+          "currency": "GBP"
+        },
+        {
+          "per": "unit",
+          "amountMinor": 4,
+          "currency": "GBP",
+          "meter": "searches"
+        }
+      ],
+      "headlineCharges": [
+        {
+          "per": "flat",
+          "amountMinor": 500,
+          "currency": "gbp",
+          "oneTime": true
+        }
+      ],
+      "perUnitCharge": {
+        "per": "unit",
+        "amountMinor": 4,
+        "currency": "GBP",
+        "meter": "searches"
+      },
+      "billingCycle": {
+        "interval": "week"
+      },
+      "tierBands": [],
+      "tierMeters": [],
+      "usageRate": {
+        "per": "unit",
+        "amountMinor": 4,
+        "currency": "GBP",
+        "meter": "searches",
+        "tiered": false
+      },
+      "trialDays": null,
+      "includedUnits": 25,
+      "meterName": "searches",
+      "countsUsage": true,
+      "planPricingShape": {
+        "shape": "free",
+        "headlineMinor": 0,
+        "currency": "USD",
+        "cycle": {
+          "interval": "week"
+        },
+        "rate": {
+          "per": "unit",
+          "amountMinor": 4,
+          "currency": "GBP",
+          "meter": "searches",
+          "tiered": false
+        }
+      },
+      "creditsPerUnitFromBalance": null
+    }
+  }
+}
