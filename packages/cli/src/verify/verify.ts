@@ -4,8 +4,9 @@
  *
  * - `/.well-known/oauth-protected-resource` and
  *   `/.well-known/oauth-authorization-server` have the expected shape.
- * - `tools/list` has the intent tools (`account`, `activate_plan`) and no
- *   UI-only tools, or the server answers 401 with a well-formed
+ * - An MCP session opens (`initialize`, as hosts do) and `tools/list` has the
+ *   intent tools (`account`, `activate_plan`) and no UI-only tools, or the
+ *   server answers 401 with a well-formed
  *   `WWW-Authenticate: Bearer resource_metadata="…"` challenge.
  * - With a bearer token: a paid tool called without a plan returns text-only
  *   narration that names `account`, with a checkout URL and no UI payload;
@@ -13,17 +14,19 @@
  *   mode is not a bootstrap error.
  *
  * The result is a JSON map of passed / failed / skipped checks. Taken from the
- * TypeScript MCP template's `scripts/verify.mjs`, which it matches.
+ * TypeScript MCP template's `scripts/verify.mjs`.
  */
 import {
-  callTool,
   getJson,
-  listTools,
+  openSession,
   RpcError,
   toServerRoot,
+  type McpSession,
   type RpcOptions,
   type ToolCallResult,
+  type ToolDescriptor,
 } from './mcp-client'
+import { probeArguments } from './probe-args'
 
 const INTENT_TOOLS = ['account', 'activate_plan']
 const UI_TOOL_HINTS = ['create_payment_intent', 'create_hosted_session']
@@ -48,9 +51,11 @@ const assert: (condition: unknown, message: string) => asserts condition = (cond
   if (!condition) throw new Error(message)
 }
 
+const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err))
+
 const failure = (err: unknown): CheckResult => ({
   status: 'failed',
-  error: err instanceof Error ? err.message : String(err),
+  error: errorText(err),
   info: err instanceof RpcError ? err.info : undefined,
 })
 
@@ -62,33 +67,95 @@ const run = async (fn: () => Promise<Record<string, unknown>>): Promise<CheckRes
   }
 }
 
-type ToolsListValue = { names?: string[]; authRequired: boolean }
+/** A tool only the SolvaPay widget calls: tagged `audience: "ui"` by every SDK. */
+const isUiTool = (tool: ToolDescriptor): boolean =>
+  tool._meta?.audience === 'ui' || UI_TOOL_HINTS.includes(tool.name)
 
-const runToolsListCheck = async (base: string, rpcOptions: RpcOptions): Promise<CheckResult> => {
+type ToolsListOutcome = {
+  check: CheckResult
+  /** The open session, when `initialize` succeeded. */
+  session?: McpSession
+  /** The listed tools, when `tools/list` answered. */
+  tools?: ToolDescriptor[]
+  /** The server answered 401 with a well-formed challenge. */
+  authRequired: boolean
+}
+
+const runToolsListCheck = async (
+  serverUrl: string,
+  rpcOptions: RpcOptions,
+): Promise<ToolsListOutcome> => {
+  let session: McpSession
   try {
-    const names = (await listTools(base, rpcOptions)).map(tool => tool.name)
+    session = await openSession(serverUrl, rpcOptions)
+  } catch (err) {
+    if (err instanceof RpcError && err.info.httpStatus === 401) {
+      const challenge = err.info.wwwAuthenticate ?? ''
+      if (rpcOptions.bearerToken) {
+        return {
+          check: {
+            status: 'failed',
+            error: 'server rejected the bearer token from --credentials-file (HTTP 401)',
+            info: { wwwAuthenticate: challenge || null },
+          },
+          authRequired: true,
+        }
+      }
+      if (/^Bearer\b/i.test(challenge) && /resource_metadata="/.test(challenge)) {
+        return {
+          check: { status: 'passed', value: { authRequired: true, wwwAuthenticate: challenge } },
+          authRequired: true,
+        }
+      }
+      return {
+        check: {
+          status: 'failed',
+          error: 'server returned 401 without a well-formed `WWW-Authenticate: Bearer …` challenge',
+          info: { wwwAuthenticate: challenge || null },
+        },
+        authRequired: false,
+      }
+    }
+    return {
+      check: failure(new Error(`MCP initialize failed: ${errorText(err)}`)),
+      authRequired: false,
+    }
+  }
+
+  let tools: ToolDescriptor[]
+  try {
+    tools = await session.listTools()
+  } catch (err) {
+    return { check: failure(err), session, authRequired: false }
+  }
+
+  const names = tools.map(tool => tool.name)
+  try {
     for (const intent of INTENT_TOOLS) {
       assert(names.includes(intent), `intent tool \`${intent}\` missing from tools/list`)
     }
-    const leakedUi = names.filter(name => UI_TOOL_HINTS.includes(name))
+    const leakedUi = tools.filter(isUiTool).map(tool => tool.name)
     assert(
       leakedUi.length === 0,
       `UI-only tools leaked to text catalog: ${leakedUi.join(', ')}. Hide tools whose audience is "ui".`,
     )
-    return { status: 'passed', value: { toolCount: names.length, names, authRequired: false } }
-  } catch (err) {
-    if (err instanceof RpcError && err.info.httpStatus === 401) {
-      const challenge = err.info.wwwAuthenticate ?? ''
-      if (/^Bearer\b/i.test(challenge) && /resource_metadata="/.test(challenge)) {
-        return { status: 'passed', value: { authRequired: true, wwwAuthenticate: challenge } }
-      }
-      return {
-        status: 'failed',
-        error: 'server returned 401 without a well-formed `WWW-Authenticate: Bearer …` challenge',
-        info: { wwwAuthenticate: challenge || null },
-      }
+    return {
+      check: {
+        status: 'passed',
+        value: {
+          toolCount: names.length,
+          names,
+          authRequired: false,
+          sessionPinned: Boolean(session.sessionId),
+          protocolVersion: session.protocolVersion,
+        },
+      },
+      session,
+      tools,
+      authRequired: false,
     }
-    return failure(err)
+  } catch (err) {
+    return { check: failure(err), session, tools, authRequired: false }
   }
 }
 
@@ -159,39 +226,62 @@ const assertPaywallGateShape = (
   )
 }
 
+const firstLine = (text: string): string => text.split(/\r?\n/)[0].slice(0, 200)
+
 /**
- * Calls each non-intent, non-UI tool with probe arguments until one answers
- * with a paywall gate, and checks that gate's shape. Skipped when no tool
- * gates (free tools, or a customer with balance left).
+ * Calls each listed tool that is neither an intent tool nor a widget-only tool,
+ * with arguments built from its `inputSchema`, until one answers with a paywall
+ * gate, and checks that gate's shape. Skipped when no tool gates (free tools,
+ * or a customer with balance left); the reason names the calls that errored.
  */
 const runPaywallGateCheck = async (
-  base: string,
-  candidates: string[],
-  rpcOptions: RpcOptions,
+  session: McpSession,
+  tools: ToolDescriptor[],
 ): Promise<CheckResult> => {
-  if (candidates.length === 0) return { status: 'skipped', reason: 'no paid tools registered' }
-  for (const name of candidates) {
+  const candidates = tools.filter(tool => !INTENT_TOOLS.includes(tool.name) && !isUiTool(tool))
+  if (candidates.length === 0) {
+    return { status: 'skipped', reason: 'no tools listed besides the intent and widget tools' }
+  }
+  const errors: string[] = []
+  for (const tool of candidates) {
+    const args = probeArguments(tool)
     let response: ToolCallResult
     try {
-      response = await callTool(
-        base,
-        name,
-        { query: 'probe', symbol: 'AAPL', ticker: 'AAPL' },
-        rpcOptions,
-      )
-    } catch {
+      response = await session.callTool(tool.name, args)
+    } catch (err) {
+      errors.push(`${tool.name}: ${firstLine(errorText(err))}`)
       continue
     }
     const gate = isPaywallGate(response?.structuredContent)
-    if (!gate) continue
+    if (!gate) {
+      if (response?.isError) {
+        errors.push(
+          `${tool.name}: ${firstLine(response.content?.[0]?.text ?? 'isError with no text')}`,
+        )
+      }
+      continue
+    }
     try {
-      assertPaywallGateShape(name, response, gate)
+      assertPaywallGateShape(tool.name, response, gate)
       return {
         status: 'passed',
-        value: { tool: name, narrationLength: response.content?.[0]?.text?.length },
+        value: {
+          tool: tool.name,
+          arguments: args,
+          kind: gate.kind,
+          narrationLength: response.content?.[0]?.text?.length,
+        },
       }
     } catch (err) {
       return failure(err)
+    }
+  }
+  if (errors.length > 0) {
+    return {
+      status: 'skipped',
+      reason:
+        `no candidate tool returned a paywall gate; ${errors.length} of ${candidates.length} ` +
+        `call(s) errored instead, so the gate may never have been reached: ${errors.join('; ')}`,
     }
   }
   return {
@@ -201,18 +291,12 @@ const runPaywallGateCheck = async (
   }
 }
 
-const runIntentToolsTextCheck = async (
-  base: string,
-  rpcOptions: RpcOptions,
-): Promise<CheckResult> => {
+const runIntentToolsTextCheck = async (session: McpSession): Promise<CheckResult> => {
   let response: ToolCallResult
   try {
-    response = await callTool(base, 'account', {}, rpcOptions)
+    response = await session.callTool('account', {})
   } catch (err) {
-    return {
-      status: 'failed',
-      error: `account (no mode) call failed: ${err instanceof Error ? err.message : String(err)}`,
-    }
+    return { status: 'failed', error: `account (no mode) call failed: ${errorText(err)}` }
   }
   try {
     assert(
@@ -231,17 +315,12 @@ const runIntentToolsTextCheck = async (
   }
 }
 
-const runMerchantBootstrapCheck = async (
-  base: string,
-  rpcOptions: RpcOptions,
-): Promise<CheckResult> => {
+const runMerchantBootstrapCheck = async (session: McpSession): Promise<CheckResult> => {
   let response: ToolCallResult
   try {
-    response = await callTool(base, 'account', { mode: 'text' }, rpcOptions)
+    response = await session.callTool('account', { mode: 'text' })
   } catch (err) {
-    return failure(
-      new Error(`account call failed: ${err instanceof Error ? err.message : String(err)}`),
-    )
+    return failure(new Error(`account call failed: ${errorText(err)}`))
   }
   if (!response || typeof response !== 'object') {
     return { status: 'failed', error: 'account returned no response envelope' }
@@ -280,6 +359,16 @@ const collectWarnings = (checks: Record<string, CheckResult>): string[] => {
   return warnings
 }
 
+const NEEDS_TOKEN = (what: string): CheckResult => ({
+  status: 'skipped',
+  reason: `server requires bearer auth; pass \`--credentials-file <path>\` to exercise ${what}`,
+})
+
+const NO_SESSION: CheckResult = {
+  status: 'skipped',
+  reason: 'not run: no MCP session could be opened (see the toolsList check)',
+}
+
 export const verifyServer = async (
   serverUrl: string,
   { bearerToken }: { bearerToken?: string } = {},
@@ -310,37 +399,35 @@ export const verifyServer = async (
     return { issuer: meta.issuer }
   })
 
-  const toolsResult = await runToolsListCheck(serverUrl, rpcOptions)
-  checks.toolsList = toolsResult
-  const toolsValue =
-    toolsResult.status === 'passed' ? (toolsResult.value as ToolsListValue) : undefined
-  const gated = Boolean(toolsValue?.authRequired) && !bearerToken
-  const candidates = (toolsValue?.names ?? []).filter(
-    name => !INTENT_TOOLS.includes(name) && !UI_TOOL_HINTS.includes(name),
-  )
+  const { check, session, tools, authRequired } = await runToolsListCheck(serverUrl, rpcOptions)
+  checks.toolsList = check
+  const gated = authRequired && !bearerToken
 
   checks.paywallGate = gated
-    ? {
-        status: 'skipped',
-        reason:
-          'server requires bearer auth; pass `--credentials-file <path>` to exercise the paywall gate',
-      }
-    : await runPaywallGateCheck(serverUrl, candidates, rpcOptions)
+    ? NEEDS_TOKEN('the paywall gate')
+    : !session
+      ? NO_SESSION
+      : !tools
+        ? {
+            status: 'skipped',
+            reason: 'not run: tools/list did not answer (see the toolsList check)',
+          }
+        : await runPaywallGateCheck(session, tools)
 
   checks.intentToolsText = gated
-    ? {
-        status: 'skipped',
-        reason:
-          'server requires bearer auth; pass `--credentials-file <path>` to exercise intent tools',
-      }
-    : await runIntentToolsTextCheck(serverUrl, rpcOptions)
+    ? NEEDS_TOKEN('intent tools')
+    : !session
+      ? NO_SESSION
+      : await runIntentToolsTextCheck(session)
 
-  checks.merchantBootstrap = bearerToken
-    ? await runMerchantBootstrapCheck(serverUrl, rpcOptions)
-    : {
+  checks.merchantBootstrap = !bearerToken
+    ? {
         status: 'skipped',
         reason: 'no --credentials-file passed; cannot exercise SolvaPay bootstrap',
       }
+    : !session
+      ? NO_SESSION
+      : await runMerchantBootstrapCheck(session)
 
   return {
     serverUrl: base,
@@ -350,6 +437,6 @@ export const verifyServer = async (
       merchantBootstrap: checks.merchantBootstrap.status,
     },
     warnings: collectWarnings(checks),
-    overall: Object.values(checks).every(check => check.status !== 'failed') ? 'passed' : 'failed',
+    overall: Object.values(checks).every(entry => entry.status !== 'failed') ? 'passed' : 'failed',
   }
 }
