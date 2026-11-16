@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createAgentCalls } from '../calls'
 import { createAgentKeyVerifier, createAgentLayer } from '../identity'
-import { createAgentHttpGate } from '../http'
+import { MppPaidCallError, createAgentHttpGate, refusalResponse } from '../http'
 import {
   MPP_AGENT_KEY_HEADER,
   MPP_RECEIPT_HEADER,
@@ -156,6 +156,49 @@ describe('createAgentHttpGate with MPP', () => {
       refused: { reason: 'topup_required', message: 'Pay again with MPP to buy more.' },
     })
     expect(mpp.challenges).toEqual([{ realm: 'api.merchant.test', agentKey: PAYER_KEY }])
+  })
+
+  it('hands a new payer its key with the next challenge when its first call is still short', async () => {
+    const { agentApi, mpp, call } = setup()
+    agentApi.outcome = 'refused'
+    agentApi.refusal = { reason: 'topup_required', message: 'Pay again with MPP to buy more.' }
+    const result = await call('', CREDENTIAL)
+    if (result.kind !== 'mpp_challenge') throw new Error(`not a challenge: ${result.kind}`)
+    expect(result.headers.get(MPP_AGENT_KEY_HEADER)).toBe(PAYER_KEY)
+    expect(result.headers.get('www-authenticate')).toContain('method="stripe"')
+    expect(mpp.challenges).toEqual([{ realm: 'api.merchant.test', agentKey: PAYER_KEY }])
+  })
+
+  it('hands a new payer its key with a refusal, and refusalResponse sends it', async () => {
+    const { agentApi, call } = setup()
+    agentApi.outcome = 'refused'
+    agentApi.refusal = { reason: 'deny', message: 'Not this item.' }
+    const result = await call('', CREDENTIAL)
+    if (result.kind !== 'refused') throw new Error(`not refused: ${result.kind}`)
+    expect(result.paid?.get(MPP_AGENT_KEY_HEADER)).toBe(PAYER_KEY)
+    const response = refusalResponse(result.refused, result.challenge, result.paid)
+    expect(response.headers.get(MPP_AGENT_KEY_HEADER)).toBe(PAYER_KEY)
+    expect(response.status).toBe(result.status)
+  })
+
+  it('hands a new payer its key when SolvaPay cannot authorize the call it paid for', async () => {
+    const { agentApi, call } = setup()
+    agentApi.failAuthorize = 503
+    const result = await call('', CREDENTIAL)
+    if (result.kind !== 'refused') throw new Error(`not refused: ${result.kind}`)
+    expect(result.paid?.get(MPP_AGENT_KEY_HEADER)).toBe(PAYER_KEY)
+  })
+
+  it('carries a new payer’s key on the error when the call throws after the payment', async () => {
+    const { agentApi, call } = setup()
+    agentApi.verifyAgentKey = async () => {
+      throw new Error('SolvaPay unreachable')
+    }
+    const error = await call('', CREDENTIAL).catch(e => e)
+    expect(error).toBeInstanceOf(MppPaidCallError)
+    expect((error as MppPaidCallError).paid.get(MPP_AGENT_KEY_HEADER)).toBe(PAYER_KEY)
+    expect((error as MppPaidCallError).message).toContain('SolvaPay unreachable')
+    expect((error as MppPaidCallError).message).not.toContain(PAYER_KEY)
   })
 
   it('keeps an owned agent’s topup_required a refusal: its owner tops it up, not MPP', async () => {
