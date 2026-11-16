@@ -5,16 +5,16 @@
 
 SolvaPay CLI — authenticate, configure env, and bootstrap SDK integration in an existing repo.
 
-**Configure** with `npx solvapay init` · **Integrate** with `@solvapay/server`, `@solvapay/next`, or `@solvapay/mcp` · **Monetize** with paywalls, checkout UI, and usage metering.
+**Configure** with `npx -y solvapay@latest init` · **Integrate** with `@solvapay/server`, `@solvapay/next`, or `@solvapay/mcp` · **Monetize** with paywalls, checkout UI, and usage metering.
 
 ## Quickstart
 
 ```bash
 # Auth + env in an existing project
-npx solvapay init
+npx -y solvapay@latest init
 
 # Skip prompts (fails instead of guessing when the language is unclear)
-npx solvapay init --yes
+npx -y solvapay@latest init --yes
 
 # A Python or Go project: detected from pyproject.toml / uv.lock / poetry.lock /
 # requirements.txt or go.mod, or named with --language
