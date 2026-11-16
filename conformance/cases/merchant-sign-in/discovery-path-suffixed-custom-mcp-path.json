@@ -2,7 +2,7 @@
   "$schema": "../../case.schema.json",
   "suite": "merchant-sign-in",
   "case": "discovery-path-suffixed-custom-mcp-path",
-  "description": "With a custom MCP endpoint path, the path-suffixed protected-resource URL follows it (/.well-known/oauth-protected-resource/rpc) and serves the same document as the root. The default suffix (/mcp) is then a 404.",
+  "description": "With a custom MCP endpoint path, the path-suffixed protected-resource URL follows it (/.well-known/oauth-protected-resource/rpc) and names that endpoint as the resource. The default suffix (/mcp) is then a 404.",
   "input": {
     "fn": "merchantMcpHttp",
     "args": {
@@ -28,7 +28,7 @@
             "content-type": "application/json"
           },
           "body": {
-            "resource": "https://mcp-si.conformance.test",
+            "resource": "https://mcp-si.conformance.test/rpc",
             "authorization_servers": [
               "https://mcp-si.conformance.test"
             ],

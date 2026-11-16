@@ -14,7 +14,6 @@
 import {
   assertValidProductRef,
   getOAuthAuthorizationServerResponse,
-  getOAuthProtectedResourceResponse,
   logDcrFailureDiagnostic,
   logMcpConfigOnce,
   resolveOAuthPaths,
@@ -22,7 +21,7 @@ import {
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
 import { toOAuthErrorBody } from '../internal/oauth-error-normalize'
-import { protectedResourcePaths } from '../internal/protected-resource-paths'
+import { protectedResourceDocuments } from '../internal/protected-resource-paths'
 import { applyNativeCors, corsPreflight } from './cors'
 
 export interface FetchOAuthOptions {
@@ -86,10 +85,15 @@ export function createProtectedResourceHandler(options: {
   protectedResourcePath?: string
   mcpPath?: string
 }): FetchHandler {
-  const paths = protectedResourcePaths(options.protectedResourcePath, options.mcpPath)
+  const documents = protectedResourceDocuments(
+    options.publicBaseUrl,
+    options.protectedResourcePath,
+    options.mcpPath,
+  )
   return async req => {
-    if (req.method !== 'GET' || !paths.includes(pathOf(req))) return null
-    return jsonResponse(req, 200, getOAuthProtectedResourceResponse(options.publicBaseUrl))
+    const document = req.method === 'GET' ? documents.get(pathOf(req)) : undefined
+    if (!document) return null
+    return jsonResponse(req, 200, document)
   }
 }
 

@@ -42,15 +42,19 @@ describe('createProtectedResourceHandler', () => {
     expect(res).toBeNull()
   })
 
-  it('serves the same document under the MCP path (RFC 9728 path-suffixed URL)', async () => {
+  it('serves the endpoint as the resource at the RFC 9728 path-suffixed URL', async () => {
     const handler = createProtectedResourceHandler({ publicBaseUrl, mcpPath: '/mcp' })
-    const root = await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`))
+    const root = (await (await handler(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
+    ))!.json()) as Record<string, unknown>
     const suffixed = await handler(
       new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/mcp`),
     )
     expect(suffixed!.status).toBe(200)
-    // The same resource either way, so tokens are bound alike whichever a client found.
-    expect(await suffixed!.json()).toEqual(await root!.json())
+    // RFC 9728 §3.3: the resource is the URL the client started from. The root
+    // document keeps the origin; both name this server as the issuer.
+    expect(await suffixed!.json()).toEqual({ ...root, resource: `${publicBaseUrl}/mcp` })
+    expect(root.resource).toBe(publicBaseUrl)
     expect(
       await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/other`)),
     ).toBeNull()
@@ -58,10 +62,11 @@ describe('createProtectedResourceHandler', () => {
 
   it('follows a custom MCP path and serves no suffix without one', async () => {
     const custom = createProtectedResourceHandler({ publicBaseUrl, mcpPath: '/rpc/' })
-    expect(
-      (await custom(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/rpc`)))!
-        .status,
-    ).toBe(200)
+    const rpc = await custom(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/rpc`),
+    )
+    expect(rpc!.status).toBe(200)
+    expect(((await rpc!.json()) as { resource: string }).resource).toBe(`${publicBaseUrl}/rpc`)
     const none = createProtectedResourceHandler({ publicBaseUrl })
     expect(
       await none(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/mcp`)),

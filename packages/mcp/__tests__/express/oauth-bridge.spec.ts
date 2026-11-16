@@ -725,7 +725,7 @@ describe('createMcpOAuthBridge integration', () => {
     expect(JSON.stringify(body)).not.toContain('product_ref')
   })
 
-  it('serves the protected-resource document under the MCP path too', async () => {
+  it('serves the endpoint as the resource at the path-suffixed URL', async () => {
     const middlewares = createMcpOAuthBridge({ publicBaseUrl, apiBaseUrl, productRef })
     const root = mockRes()
     await runPipeline(
@@ -741,8 +741,11 @@ describe('createMcpOAuthBridge integration', () => {
       suffixed.res,
       suffixed.state,
     )
-    expect(suffixed.state.body).toEqual(root.state.body)
-    expect((suffixed.state.body as { resource: string }).resource).toBe(publicBaseUrl)
+    expect(suffixed.state.body).toEqual({
+      ...(root.state.body as object),
+      resource: `${publicBaseUrl}/mcp`,
+    })
+    expect((root.state.body as { resource: string }).resource).toBe(publicBaseUrl)
   })
 
   it('returns 405 with Allow: POST, OPTIONS on GET /mcp', async () => {
