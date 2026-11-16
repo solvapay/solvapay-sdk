@@ -2636,11 +2636,6 @@ export interface components {
       stripePublishableKey?: string
     }
     SdkProductResponse: {
-      /**
-       * Product balance in cents
-       * @example 0
-       */
-      balance: number
       /** @description Product-specific configuration */
       config?: components['schemas']['ProductConfigDto']
       /** @description Creation timestamp */
@@ -2696,11 +2691,6 @@ export interface components {
        * @example active
        */
       status: string
-      /**
-       * Total number of transactions
-       * @example 0
-       */
-      totalTransactions: number
       /** @description Last update timestamp */
       updatedAt: string
     }

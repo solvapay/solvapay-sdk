@@ -4437,11 +4437,6 @@
       },
       "SdkProductResponse": {
         "properties": {
-          "balance": {
-            "description": "Product balance in cents",
-            "example": 0,
-            "type": "number"
-          },
           "config": {
             "allOf": [
               {
@@ -4516,11 +4511,6 @@
             "example": "active",
             "type": "string"
           },
-          "totalTransactions": {
-            "description": "Total number of transactions",
-            "example": 0,
-            "type": "number"
-          },
           "updatedAt": {
             "description": "Last update timestamp",
             "type": "string"
@@ -4529,8 +4519,6 @@
         "required": [
           "reference",
           "name",
-          "balance",
-          "totalTransactions",
           "isManagedMcp",
           "isMcpPay",
           "status",
