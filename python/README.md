@@ -12,7 +12,7 @@ Python 3.10+. Typed (`py.typed`), async-first, with blocking twins for the API c
 
 ## With an AI coding agent
 
-Install the SolvaPay skills before you start your agent (a skill installed during a session loads only in the next one), then ask for what you want, naming the product to bill:
+Install the SolvaPay skills, then ask your agent for what you want, naming the product to bill:
 
 ```bash
 npx skills add solvapay/skills -a claude-code -y   # other agents: -a <agent>
@@ -20,7 +20,7 @@ npx skills add solvapay/skills -a claude-code -y   # other agents: -a <agent>
 
 > Add SolvaPay to this FastAPI app so that `GET /forecast` is paid per call. Bill product `prd_…`.
 
-Already in a session? Start the prompt with "First run `npx -y skills use solvapay/skills --skill app-integration` and follow the skill it prints."
+Installed during a Claude Code session? It loads right away if `.claude/skills/` existed when the session started; otherwise type `/reload-skills`. Or skip the install: start the prompt with "First run `npx -y skills use solvapay/skills --skill app-integration` and follow the skill it prints."
 
 The agent runs `npx -y solvapay@latest init --language python --product prd_…`; approve it. It opens your browser to sign in to SolvaPay and writes `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` to `.env`. Create the product, with the plan that sets the price, in [SolvaPay Console](https://app.solvapay.com/products) first. If your app has no sign-in yet, decide how callers are identified first: the paywall bills your own user id.
 
