@@ -185,13 +185,11 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
       process.stdout.write(`   ${message}\n`)
     })
     if (!installResult.ok) {
-      process.stdout.write(
-        `⚠️  ${installResult.command} failed (${installResult.warning ?? 'unknown error'}). ` +
-          `Run \`${packageManager} install\` manually inside ${target} before deploying.\n`,
+      throw new Error(
+        `\`${installResult.command}\` failed in ${target}: ${installResult.warning ?? 'unknown error'}`,
       )
-    } else {
-      process.stdout.write('✅ Dependencies installed\n')
     }
+    process.stdout.write('✅ Dependencies installed\n')
   }
 
   process.stdout.write('\n')

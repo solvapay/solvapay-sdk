@@ -107,13 +107,7 @@
             "product": {
               "reference": "prd_tl_boot",
               "name": "Stock Research",
-              "status": "active",
-              "balance": 0,
-              "isManagedMcp": false,
-              "isMcpPay": false,
-              "totalTransactions": 0,
-              "createdAt": "2026-01-01T00:00:00Z",
-              "updatedAt": "2026-01-01T00:00:00Z"
+              "status": "active"
             },
             "plans": [
               {
