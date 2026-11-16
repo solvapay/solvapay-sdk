@@ -386,6 +386,14 @@ def log_dcr_failure(product_ref: str, api_base_url: str, status: int, body: str)
 # ---- the bridge (oauth-bridge.ts) -----------------------------------------------
 
 
+def _path_suffix(mcp_path: str | None) -> str:
+    """``/mcp`` for ``mcp/`` or ``/mcp/``; empty for no path or ``/``."""
+    trimmed = (mcp_path or "").rstrip("/")
+    if not trimmed:
+        return ""
+    return trimmed if trimmed.startswith("/") else f"/{trimmed}"
+
+
 def oauth_bridge_routes(
     *,
     public_base_url: str,
@@ -393,8 +401,14 @@ def oauth_bridge_routes(
     product_ref: str,
     paths: dict[str, str] | None = None,
     http_client: httpx.AsyncClient | None = None,
+    mcp_path: str | None = None,
 ) -> list[Route]:
     """The routes that let MCP clients sign a customer in through this server.
+
+    The protected-resource document is also served at its RFC 9728
+    path-suffixed URL, the well-known path with ``mcp_path`` appended
+    (``/.well-known/oauth-protected-resource/mcp``): the same document, so a
+    client names the same resource whichever URL it found.
 
     Each answers every method: one it does not serve is a 404 ``not_found``, as the
     TypeScript handler answers a request no route claims.
@@ -490,6 +504,11 @@ def oauth_bridge_routes(
     return [
         Route(OPENID_CONFIGURATION_PATH, openid_configuration, methods=ALL_METHODS),
         Route(PROTECTED_RESOURCE_PATH, document(resource), methods=ALL_METHODS),
+        *(
+            [Route(f"{PROTECTED_RESOURCE_PATH}{suffix}", document(resource), methods=ALL_METHODS)]
+            if (suffix := _path_suffix(mcp_path))
+            else []
+        ),
         Route(AUTHORIZATION_SERVER_PATH, document(metadata), methods=ALL_METHODS),
         Route(resolved["register"], register, methods=ALL_METHODS),
         Route(resolved["authorize"], authorize, methods=ALL_METHODS),

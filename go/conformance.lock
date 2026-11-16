@@ -58,6 +58,8 @@
     "merchant-sign-in/cors-preflight.json": "sha256:d5fad1dd4599357dbdf5736307066af746241f98f92f7a92fa3fa2cdb21262f0",
     "merchant-sign-in/custom-paths.json": "sha256:f700428fc648a803c1391820c24a2dde7fc400f88b2e56852dd6f773136dc761",
     "merchant-sign-in/discovery-documents.json": "sha256:181a98220e5a1130cff6d0f5e9489c0b04863678aa44663b04c42ab95aac8726",
+    "merchant-sign-in/discovery-path-suffixed-custom-mcp-path.json": "sha256:2dab0275e1a4da1dbbbdc429cbe045dc2543fe4c901c91ee285f609473019fa5",
+    "merchant-sign-in/discovery-path-suffixed.json": "sha256:c730752463a8d958bdd23e6b1dee53fb9a0e38cd306c6dedb2b11072a413af04",
     "merchant-sign-in/free-meter-caps-disagree.json": "sha256:bae72c6bea567b2d928551a7a6994578852615978aaf828f555e2e375f8c32d7",
     "merchant-sign-in/free-meter-name-invalid.json": "sha256:964132170459361c7bf0b8917f12eca742c988ef416f6e4ad0a8304c2dc54deb",
     "merchant-sign-in/free-window-needs-days.json": "sha256:6b537df427a7c015a33b10c2be49acf5dcc1954e9e7f986736e5dd40f0513c15",

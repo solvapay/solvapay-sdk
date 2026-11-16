@@ -477,7 +477,7 @@ func (s *MCPServer) Handler() http.Handler {
 			}
 			applyNativeCORS(r, w.Header())
 			w.WriteHeader(http.StatusNotFound)
-		case protectedResourcePath, authorizationServerPath:
+		case protectedResourcePath, protectedResourcePath + mcpPathSuffix(s.mcpPath), authorizationServerPath:
 			if r.Method != http.MethodGet {
 				notFound(w)
 				return
@@ -649,4 +649,16 @@ func (s *MCPServer) serveMCP(w http.ResponseWriter, r *http.Request, verified ht
 	applyNativeCORS(r, w.Header())
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	verified.ServeHTTP(w, r)
+}
+
+// mcpPathSuffix is the MCP path as the RFC 9728 path-suffixed protected-resource
+// URL appends it ("/mcp" for "mcp/" or "/mcp/"). The document served there is
+// the root one, so a client names the same resource whichever URL it found.
+// An MCP path of "/" gives "", so only the root document is served.
+func mcpPathSuffix(mcpPath string) string {
+	trimmed := strings.TrimRight(mcpPath, "/")
+	if trimmed != "" && !strings.HasPrefix(trimmed, "/") {
+		return "/" + trimmed
+	}
+	return trimmed
 }

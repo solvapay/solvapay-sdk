@@ -282,6 +282,7 @@ def create_solvapay_mcp_server(
         product_ref=product,
         paths=oauth_paths,
         http_client=http_client,
+        mcp_path=mcp_path,
     ):
         server.custom_route(route.path, methods=sorted(route.methods or []))(route.endpoint)
     register_intent_tools(
