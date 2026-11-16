@@ -393,7 +393,7 @@ func BuildBootstrapPayload(ctx context.Context, client *Client, request Bootstra
 		"stripePublishableKey": jsCoalesce(jsGet(config, "stripePublishableKey"), nil),
 		"returnUrl":            request.PublicBaseURL,
 		"merchant":             merchant,
-		"product":              withoutMerchantFigures(productData),
+		"product":              customerProduct(productData),
 		"plans":                plans,
 		"customer":             payloadCustomer,
 		"checkoutUrl":          jsCoalesce(jsGet(checkout, "checkoutUrl"), nil),
@@ -418,14 +418,17 @@ func bootstrapError(err error, message func(*Error) string) error {
 	return &Error{Code: sdkErr.Code, Status: sdkErr.Status, Message: message(sdkErr), Body: sdkErr.Body}
 }
 
-// withoutMerchantFigures drops the product's balance and totalTransactions:
-// the merchant's own figures for the product, not the customer's, so they are
-// never sent in a payload customers and models read. The customer's balance is
-// customer.balance.
-func withoutMerchantFigures(product map[string]any) map[string]any {
-	out := make(map[string]any, len(product))
-	for key, value := range product {
-		if key != "balance" && key != "totalTransactions" {
+// customerProductFields is what customers and models see of the product. The
+// rest (the merchant's metadata, its own revenue figures, its MCP and delivery
+// config) stays out, and a field the platform adds later stays out until it is
+// named here.
+var customerProductFields = []string{"reference", "name", "status", "description", "imageUrl"}
+
+// customerProduct keeps only customerProductFields of the platform's product.
+func customerProduct(product map[string]any) map[string]any {
+	out := make(map[string]any, len(customerProductFields))
+	for _, key := range customerProductFields {
+		if value, ok := product[key]; ok {
 			out[key] = value
 		}
 	}

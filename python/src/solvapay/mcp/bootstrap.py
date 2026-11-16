@@ -233,9 +233,10 @@ def derive_usage_snapshot(
     }
 
 
-# The merchant's own figures for the product, not the customer's: never sent in
-# a payload customers and models read. The customer's balance is customer.balance.
-_MERCHANT_PRODUCT_FIELDS = ("balance", "totalTransactions")
+# What customers and models see of the product. The rest (the merchant's
+# metadata, its own revenue figures, its MCP and delivery config) stays out, and
+# a field the platform adds later stays out until it is named here.
+_CUSTOMER_PRODUCT_FIELDS = ("reference", "name", "status", "description", "imageUrl")
 
 
 def _dump(model: Any) -> Any:
@@ -477,7 +478,7 @@ async def build_bootstrap_payload(
         "returnUrl": public_base_url,
         "merchant": merchant_data,
         "product": {
-            key: value for key, value in product_data.items() if key not in _MERCHANT_PRODUCT_FIELDS
+            key: product_data[key] for key in _CUSTOMER_PRODUCT_FIELDS if key in product_data
         },
         "plans": plan_list,
         "customer": payload_customer,
