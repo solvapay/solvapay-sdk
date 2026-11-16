@@ -334,6 +334,74 @@ describe('verifyServer', () => {
     expect(reason).not.toContain('unused balance')
   })
 
+  const accountFor = (canCall: boolean | undefined): FakeTool => ({
+    name: 'account',
+    call: () => ({
+      ...text('Plans: https://pay.example/c'),
+      structuredContent: {
+        view: 'account',
+        customer: { ref: 'cus_1', ...(canCall === undefined ? {} : { canCall }) },
+      },
+    }),
+  })
+
+  it('never calls a paid tool for a customer who can already pay', async () => {
+    const { base, seen } = await serveMcp([
+      accountFor(true),
+      { name: 'activate_plan' },
+      { name: 'quote', call: gate },
+    ])
+
+    const summary = await verifyServer(base, { bearerToken: 'token' })
+
+    expect(summary.checks.paywallGate).toMatchObject({
+      status: 'skipped',
+      reason: expect.stringContaining('canCall: true'),
+    })
+    expect(summary.overall).toBe('passed')
+    expect(summary.warnings.join('\n')).toContain('customer with no plan')
+    const called = seen
+      .filter(entry => entry.method === 'tools/call')
+      .map(entry => (entry.params as { name: string }).name)
+    expect(called).not.toContain('quote')
+  })
+
+  it('probes paid tools when the customer cannot pay yet', async () => {
+    for (const canCall of [false, undefined]) {
+      const { base } = await serveMcp([
+        accountFor(canCall),
+        { name: 'activate_plan' },
+        { name: 'quote', call: gate },
+      ])
+      const summary = await verifyServer(base, { bearerToken: 'token' })
+      expect(summary.checks.paywallGate).toMatchObject({
+        status: 'passed',
+        value: { tool: 'quote' },
+      })
+      await new Promise<void>(resolve => server!.close(() => resolve()))
+      server = undefined
+    }
+  })
+
+  it('does not probe paid tools when account fails', async () => {
+    const { base, seen } = await serveMcp([
+      { name: 'activate_plan' },
+      { name: 'quote', call: gate },
+    ])
+
+    const summary = await verifyServer(base, { bearerToken: 'token' })
+
+    expect(summary.checks.intentToolsText.status).toBe('failed')
+    expect(summary.checks.paywallGate).toMatchObject({
+      status: 'skipped',
+      reason: expect.stringContaining('account call failed'),
+    })
+    const called = seen
+      .filter(entry => entry.method === 'tools/call')
+      .map(entry => (entry.params as { name: string }).name)
+    expect(called).not.toContain('quote')
+  })
+
   it('reports later checks as not run when no session opens', async () => {
     let base = ''
     const discovery = wellKnown(() => base)

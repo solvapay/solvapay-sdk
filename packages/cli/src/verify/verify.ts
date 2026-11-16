@@ -8,7 +8,9 @@
  *   intent tools (`account`, `activate_plan`) and no UI-only tools, or the
  *   server answers 401 with a well-formed
  *   `WWW-Authenticate: Bearer resource_metadata="…"` challenge.
- * - With a bearer token: a paid tool called without a plan returns text-only
+ * - With a bearer token: `account` is read first, and when it reports that the
+ *   customer can already pay (`customer.canCall: true`) no paid tool is called,
+ *   so verify never charges. Otherwise a paid tool called without a plan returns text-only
  *   narration that names `account`, with a checkout URL and no UI payload;
  *   `account` with no `mode` returns its default view; `account` in text
  *   mode is not a bootstrap error.
@@ -291,12 +293,20 @@ const runPaywallGateCheck = async (
   }
 }
 
-const runIntentToolsTextCheck = async (session: McpSession): Promise<CheckResult> => {
+type IntentToolsOutcome = {
+  check: CheckResult
+  /** The `account` response, when the call answered. */
+  account?: ToolCallResult
+}
+
+const runIntentToolsTextCheck = async (session: McpSession): Promise<IntentToolsOutcome> => {
   let response: ToolCallResult
   try {
     response = await session.callTool('account', {})
   } catch (err) {
-    return { status: 'failed', error: `account (no mode) call failed: ${errorText(err)}` }
+    return {
+      check: { status: 'failed', error: `account (no mode) call failed: ${errorText(err)}` },
+    }
   }
   try {
     assert(
@@ -309,10 +319,36 @@ const runIntentToolsTextCheck = async (session: McpSession): Promise<CheckResult
       /https:\/\//i.test(text) || /planRef:/.test(text),
       '`account` default mode must include a plan ref or https URL',
     )
-    return { status: 'passed', value: { account: { narrationLength: text.length } } }
+    return {
+      check: { status: 'passed', value: { account: { narrationLength: text.length } } },
+      account: response,
+    }
   } catch (err) {
-    return failure(err)
+    return { check: failure(err), account: response }
   }
+}
+
+/**
+ * Whether a paid call would be charged: every SDK's `account` response reports
+ * `customer.canCall: true` when the customer's plan or balance covers a call.
+ */
+const customerCanAlreadyPay = (account: ToolCallResult): boolean => {
+  const customer = account.structuredContent?.customer as { canCall?: unknown } | undefined
+  return customer?.canCall === true
+}
+
+const CUSTOMER_CAN_PAY: CheckResult = {
+  status: 'skipped',
+  reason:
+    'this customer can already pay (account reports canCall: true), so a paid call would be ' +
+    'charged. Sign in as a customer with no plan on this product to check the paywall',
+}
+
+const ACCOUNT_UNANSWERED: CheckResult = {
+  status: 'skipped',
+  reason:
+    "not run: the account call failed, so verify can't tell whether a paid call would be charged " +
+    '(see the intentToolsText check)',
 }
 
 const runMerchantBootstrapCheck = async (session: McpSession): Promise<CheckResult> => {
@@ -403,6 +439,13 @@ export const verifyServer = async (
   checks.toolsList = check
   const gated = authRequired && !bearerToken
 
+  // `account` runs first: its answer decides whether probing paid tools would charge.
+  const intent: IntentToolsOutcome = gated
+    ? { check: NEEDS_TOKEN('intent tools') }
+    : !session
+      ? { check: NO_SESSION }
+      : await runIntentToolsTextCheck(session)
+
   checks.paywallGate = gated
     ? NEEDS_TOKEN('the paywall gate')
     : !session
@@ -412,13 +455,13 @@ export const verifyServer = async (
             status: 'skipped',
             reason: 'not run: tools/list did not answer (see the toolsList check)',
           }
-        : await runPaywallGateCheck(session, tools)
+        : !intent.account
+          ? ACCOUNT_UNANSWERED
+          : customerCanAlreadyPay(intent.account)
+            ? CUSTOMER_CAN_PAY
+            : await runPaywallGateCheck(session, tools)
 
-  checks.intentToolsText = gated
-    ? NEEDS_TOKEN('intent tools')
-    : !session
-      ? NO_SESSION
-      : await runIntentToolsTextCheck(session)
+  checks.intentToolsText = intent.check
 
   checks.merchantBootstrap = !bearerToken
     ? {
