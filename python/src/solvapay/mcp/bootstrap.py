@@ -233,6 +233,11 @@ def derive_usage_snapshot(
     }
 
 
+# The merchant's own figures for the product, not the customer's: never sent in
+# a payload customers and models read. The customer's balance is customer.balance.
+_MERCHANT_PRODUCT_FIELDS = ("balance", "totalTransactions")
+
+
 def _dump(model: Any) -> Any:
     if isinstance(model, BaseModel):
         return model.model_dump(mode="json", by_alias=True, exclude_unset=True)
@@ -471,7 +476,9 @@ async def build_bootstrap_payload(
         "stripePublishableKey": stripe_key,
         "returnUrl": public_base_url,
         "merchant": merchant_data,
-        "product": product_data,
+        "product": {
+            key: value for key, value in product_data.items() if key not in _MERCHANT_PRODUCT_FIELDS
+        },
         "plans": plan_list,
         "customer": payload_customer,
         "checkoutUrl": coalesce(get(checkout, "checkoutUrl"), None),
