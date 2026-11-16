@@ -483,6 +483,10 @@ func (s *MCPServer) Handler() http.Handler {
 				return
 			}
 			document := protectedResourceMetadata(s.publicBaseURL)
+			if suffix := mcpPathSuffix(s.mcpPath); suffix != "" && r.URL.Path == protectedResourcePath+suffix {
+				// RFC 9728 §3.3: here the resource is the endpoint the client started from.
+				document["resource"] = s.publicBaseURL + suffix
+			}
 			if r.URL.Path == authorizationServerPath {
 				document = authorizationServerMetadata(s.publicBaseURL, paths)
 			}
@@ -652,8 +656,8 @@ func (s *MCPServer) serveMCP(w http.ResponseWriter, r *http.Request, verified ht
 }
 
 // mcpPathSuffix is the MCP path as the RFC 9728 path-suffixed protected-resource
-// URL appends it ("/mcp" for "mcp/" or "/mcp/"). The document served there is
-// the root one, so a client names the same resource whichever URL it found.
+// URL appends it ("/mcp" for "mcp/" or "/mcp/"). The document served there names
+// that endpoint as the resource; the root one keeps the public base URL.
 // An MCP path of "/" gives "", so only the root document is served.
 func mcpPathSuffix(mcpPath string) string {
 	trimmed := strings.TrimRight(mcpPath, "/")

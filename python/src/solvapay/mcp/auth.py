@@ -407,8 +407,9 @@ def oauth_bridge_routes(
 
     The protected-resource document is also served at its RFC 9728
     path-suffixed URL, the well-known path with ``mcp_path`` appended
-    (``/.well-known/oauth-protected-resource/mcp``): the same document, so a
-    client names the same resource whichever URL it found.
+    (``/.well-known/oauth-protected-resource/mcp``). There the resource is the
+    endpoint (``https://host/mcp``), as RFC 9728 §3.3 requires; the root
+    document keeps the public base URL.
 
     Each answers every method: one it does not serve is a 404 ``not_found``, as the
     TypeScript handler answers a request no route claims.
@@ -505,7 +506,14 @@ def oauth_bridge_routes(
         Route(OPENID_CONFIGURATION_PATH, openid_configuration, methods=ALL_METHODS),
         Route(PROTECTED_RESOURCE_PATH, document(resource), methods=ALL_METHODS),
         *(
-            [Route(f"{PROTECTED_RESOURCE_PATH}{suffix}", document(resource), methods=ALL_METHODS)]
+            [
+                Route(
+                    f"{PROTECTED_RESOURCE_PATH}{suffix}",
+                    # RFC 9728 §3.3: here the resource is the endpoint the client started from.
+                    document({**resource, "resource": f"{_base(public_base_url)}{suffix}"}),
+                    methods=ALL_METHODS,
+                )
+            ]
             if (suffix := _path_suffix(mcp_path))
             else []
         ),
