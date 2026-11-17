@@ -193,7 +193,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go }}
-          cache-dependency-path: go/go.sum
+          cache-dependency-path: |
+            go/go.sum
+            examples/go-stock-research-mcp/go.sum
 
       - name: Generated models match the committed spec
         if: matrix.go == '1.27'
@@ -209,6 +211,15 @@ jobs:
 
       - name: Unit and conformance tests
         run: go test ./...
+
+      # Builds against ../../go (a replace in its go.mod), so a module change
+      # that breaks the example fails here.
+      - name: Stock research example
+        working-directory: examples/go-stock-research-mcp
+        run: |
+          test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+          go vet ./...
+          go test ./...
 
   # Branch protection requires a check named "Lint, Build & Test". A matrix reports one
   # check per leg instead, so this job carries the required name and passes only when

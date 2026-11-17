@@ -1,0 +1,144 @@
+{
+  "ticker": "AMGN",
+  "cik": "0000318154",
+  "company": "Amgen",
+  "summary": {
+    "status": "ok",
+    "text": "We use several terms in this Annual Report on Form 10-K, including but not limited to those that are finance, regulation and disease-state related as well as names of other companies, which are provided below."
+  },
+  "earnings": {
+    "status": "ok",
+    "latest": {
+      "period": "2026-06-30",
+      "actualEPS": 6.29,
+      "estimateEPS": 5.7281,
+      "surprise": 0.5619,
+      "surprisePercent": 9.8095,
+      "result": "beat"
+    },
+    "history": [
+      {
+        "period": "2026-06-30",
+        "actualEPS": 6.29,
+        "estimateEPS": 5.7281,
+        "surprise": 0.5619,
+        "surprisePercent": 9.8095,
+        "result": "beat"
+      },
+      {
+        "period": "2026-03-31",
+        "actualEPS": 5.15,
+        "estimateEPS": 4.8522,
+        "surprise": 0.2978,
+        "surprisePercent": 6.1374,
+        "result": "beat"
+      },
+      {
+        "period": "2025-12-31",
+        "actualEPS": 5.29,
+        "estimateEPS": 4.8283,
+        "surprise": 0.4617,
+        "surprisePercent": 9.5624,
+        "result": "beat"
+      },
+      {
+        "period": "2025-09-30",
+        "actualEPS": 5.64,
+        "estimateEPS": 5.1144,
+        "surprise": 0.5256,
+        "surprisePercent": 10.2769,
+        "result": "beat"
+      }
+    ]
+  },
+  "filings": {
+    "status": "ok",
+    "key": [
+      {
+        "form": "10-K",
+        "filingDate": "2026-02-13",
+        "accessionNumber": "0000318154-26-000010",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000010/amgn-20251231.htm"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-08-05",
+        "accessionNumber": "0000318154-26-000126",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000126/amgn-20260630.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0000318154-26-000124",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000124/amgn-20260804.htm"
+      }
+    ],
+    "recent": [
+      {
+        "form": "4",
+        "filingDate": "2026-08-13",
+        "accessionNumber": "0000318154-26-000137",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000137/xslF345X06/form4.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-08-13",
+        "accessionNumber": "0001959173-26-005970",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000195917326005970/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-12",
+        "accessionNumber": "0000318154-26-000135",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000135/xslF345X06/form4.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-08-11",
+        "accessionNumber": "0001959173-26-005894",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000195917326005894/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-10",
+        "accessionNumber": "0000318154-26-000133",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000133/xslF345X06/form4.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-10",
+        "accessionNumber": "0000318154-26-000132",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000132/xslF345X06/form4.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-10",
+        "accessionNumber": "0000318154-26-000131",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000131/xslF345X06/form4.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-07",
+        "accessionNumber": "0000318154-26-000130",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000130/xslF345X06/form4.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-07",
+        "accessionNumber": "0000318154-26-000129",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000031815426000129/xslF345X06/form4.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-08-06",
+        "accessionNumber": "0001958244-26-000492",
+        "url": "https://www.sec.gov/Archives/edgar/data/318154/000195824426000492/xsl144X01/primary_doc.xml"
+      }
+    ]
+  },
+  "links": {
+    "secEdgar": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000318154&type=&dateb=&owner=include&count=40",
+    "companyPage": "https://zelothorn.com/company/AMGN"
+  },
+  "generatedAt": "2026-08-25T22:23:26.655Z"
+}
