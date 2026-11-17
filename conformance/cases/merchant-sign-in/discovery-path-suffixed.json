@@ -1,0 +1,89 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "discovery-path-suffixed",
+  "description": "The protected-resource document is also served at its RFC 9728 path-suffixed URL, the well-known path with the MCP endpoint's path appended (/.well-known/oauth-protected-resource/mcp), which clients that start from the endpoint URL ask for first. There the resource is the endpoint URL (public base URL plus the MCP path), as RFC 9728 section 3.3 requires; the root document keeps the public base URL, and both name this server as the authorization server. A native client's origin is mirrored as at the root. Any other suffix, and any method but GET, is a 404.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_suffixed",
+      "publicBaseUrl": "https://mcp-si.conformance.test/",
+      "requests": [
+        {
+          "path": "/.well-known/oauth-protected-resource/mcp",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval"
+          }
+        },
+        {
+          "path": "/.well-known/oauth-protected-resource"
+        },
+        {
+          "path": "/.well-known/oauth-protected-resource/other"
+        },
+        {
+          "method": "POST",
+          "path": "/.well-known/oauth-protected-resource/mcp",
+          "body": {}
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "resource": "https://mcp-si.conformance.test/mcp",
+            "authorization_servers": [
+              "https://mcp-si.conformance.test"
+            ],
+            "scopes_supported": [
+              "openid",
+              "profile",
+              "email"
+            ]
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "resource": "https://mcp-si.conformance.test",
+            "authorization_servers": [
+              "https://mcp-si.conformance.test"
+            ],
+            "scopes_supported": [
+              "openid",
+              "profile",
+              "email"
+            ]
+          }
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

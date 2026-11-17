@@ -825,10 +825,14 @@ func claimableFreePlan(plans []map[string]any) map[string]any {
 	return nil
 }
 
+// recoveryForState is the call that unblocks a customer who can't call a
+// paid tool, or "" when nothing blocks them. A funded or within-allowance
+// customer (states B, C, E, I, J) gets no recovery line: "To continue" reads
+// as a block, and the body already names the optional next step.
 func recoveryForState(state string, freePlanRef any) string {
 	switch state {
-	case "B":
-		return recoveryLine("topup")
+	case "A", "F":
+		return recoveryLine("checkout")
 	case "D":
 		return recoveryLine("topup", "checkout")
 	case "H":
@@ -836,10 +840,8 @@ func recoveryForState(state string, freePlanRef any) string {
 			return fmt.Sprintf("To continue, call `%s` with planRef: \"%s\".", activatePlanToolName, jsString(freePlanRef))
 		}
 		return recoveryLine("checkout")
-	case "J":
-		return recoveryLine("account")
 	}
-	return recoveryLine("checkout")
+	return ""
 }
 
 func accountBody(state, product string, plan any, planShape string, purchase map[string]any, customer any, plans []map[string]any, now time.Time) string {
@@ -1150,7 +1152,9 @@ func narrateManageAccount(data any, now time.Time) NarratorOutput {
 	}
 	lines = appendIf(lines, manageRow(data))
 	lines = appendIf(lines, checkoutRow(data))
-	lines = append(lines, "", recoveryForState(state, jsGet(optional(free), "reference")))
+	if recovery := recoveryForState(state, jsGet(optional(free), "reference")); recovery != "" {
+		lines = append(lines, "", recovery)
+	}
 
 	var links []ResourceLink
 	if url := httpsURL(jsGet(data, "portalUrl")); url != "" {

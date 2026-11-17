@@ -84,7 +84,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research is on the free plan: resets Dec 1. Credits are not used on Free. Call `account` with view: 'checkout' for more calls.\nSigned in as: cus_NR16\n\nTo continue, call `account` with view: \"checkout\"."
+          "text": "**Stock Research — your account**\n\nStock Research is on the free plan: resets Dec 1. Credits are not used on Free. Call `account` with view: 'checkout' for more calls.\nSigned in as: cus_NR16"
         }
       ]
     }

@@ -10,6 +10,8 @@ description: "Sell MCP tools from Go: paid and free tools, SolvaPay sign-in and 
 - The Go SDK installed and `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` set. See [Installation](/sdks/go/setup/installation).
 - A public HTTPS URL for your server. In development, use a tunnel such as ngrok (see [Run it locally](#run-it-locally)).
 
+To start from a working project instead, run `npm create solvapay@latest my-mcp-server -- --type mcp --language go`: it scaffolds this server with one paid and one free tool, tests and a Dockerfile.
+
 ## Create a server with a paid tool
 
 ```go main.go
@@ -31,9 +33,10 @@ func main() {
 		log.Fatal(err)
 	}
 	server, err := solvapay.NewMCPServer(solvapay.MCPServerOptions{
-		Client:        client, // the product comes from SOLVAPAY_PRODUCT_REF
-		PublicBaseURL: os.Getenv("PUBLIC_BASE_URL"),
-		Name:          "research",
+		Client:              client, // the product comes from SOLVAPAY_PRODUCT_REF
+		PublicBaseURL:       os.Getenv("PUBLIC_BASE_URL"),
+		Name:                "research",
+		HideToolsByAudience: []string{"ui"}, // keep the widget's own tools out of tools/list
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -175,6 +178,7 @@ server, err := solvapay.NewMCPServer(solvapay.MCPServerOptions{
 | `HideToolsByAudience` | Leaves tools whose `_meta.audience` is listed out of `tools/list`. They stay callable. The widget tools have audience `ui`. ChatGPT still gets the full list, because its widget can only call listed tools (`HideToolsBypass` changes who does). |
 | `Name`, `Version`, `Instructions` | The server's identity and instructions. `Name` defaults to `solvapay-mcp` and sets the widget's URI. |
 | `MCPPath`, `OAuthPaths` | Where the MCP endpoint and the OAuth endpoints are served. |
+| `Stateful` | Keeps an in-memory session per client (`Mcp-Session-Id`). Off by default, as in the TypeScript server: each request stands alone, so any instance behind a load balancer can answer it. Turn it on only on a single instance or with sticky routing. |
 
 To add your own tools, prompts or resources without SolvaPay's paywall, use the underlying server: `server.Server()` returns the `*mcp.Server`.
 

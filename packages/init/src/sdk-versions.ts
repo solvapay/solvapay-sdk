@@ -118,3 +118,128 @@ export const upgradeCommand = (
   if (packageManager === 'yarn') return `yarn add --exact ${specs}`
   return `npm install --save-exact ${specs}`
 }
+
+// --- Python and Go
+
+export type InstalledSdk = {
+  language: 'python' | 'go'
+  /** Where the version was read from, e.g. `uv.lock`. */
+  source: string
+  version: string
+  /** Python extras declared with it (`solvapay[mcp]`), kept in the upgrade command. */
+  extras?: string[]
+}
+
+export const readText = async (file: string): Promise<string | null> => {
+  try {
+    return await readFile(file, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw error
+  }
+}
+
+/** The `[[package]]` entry named `name` in a uv.lock or poetry.lock. */
+export const lockedPackage = (
+  lock: string,
+  name: string,
+): { version?: string; block: string } | null => {
+  for (const block of lock.split(/^\[\[package\]\]\s*$/m).slice(1)) {
+    const nameMatch = /^name\s*=\s*"([^"]+)"/m.exec(block)
+    if (nameMatch?.[1].toLowerCase() !== name) continue
+    const version = /^version\s*=\s*"([^"]+)"/m.exec(block)?.[1]
+    return { version, block }
+  }
+  return null
+}
+
+const DECLARES_SOLVAPAY = /(^|["'\s,[])solvapay(\[[^\]]*\])?\s*([=<>~!;"',]|$)/m
+
+/**
+ * The installed Python SDK, from uv.lock, poetry.lock or an exact pin in
+ * requirements.txt. `null` when the project doesn't use it. Throws when it is
+ * declared but its version can't be known: unpinned with no lockfile, or a
+ * local path instead of a PyPI release.
+ */
+export const installedPythonSdk = async (cwd: string): Promise<InstalledSdk | null> => {
+  const found = await findInstalledPythonSdk(cwd)
+  if (!found) return null
+  const declared = [
+    await readText(path.join(cwd, 'pyproject.toml')),
+    await readText(path.join(cwd, 'requirements.txt')),
+  ].join('\n')
+  const extras = /solvapay\[([^\]]+)\]/i.exec(declared)?.[1]
+  return extras ? { ...found, extras: extras.split(',').map(e => e.trim()) } : found
+}
+
+const findInstalledPythonSdk = async (cwd: string): Promise<InstalledSdk | null> => {
+  for (const lockfile of ['uv.lock', 'poetry.lock']) {
+    const lock = await readText(path.join(cwd, lockfile))
+    if (lock === null) continue
+    const entry = lockedPackage(lock, 'solvapay')
+    if (!entry) continue
+    if (/^source\s*=\s*\{[^}]*\b(editable|path|directory|git)\s*=/m.test(entry.block)) {
+      throw new Error(
+        `${lockfile} installs solvapay from a local path or git, not PyPI. Doctor checks PyPI releases only.`,
+      )
+    }
+    if (!entry.version) throw new Error(`${lockfile} has a solvapay entry without a version`)
+    return { language: 'python', source: lockfile, version: entry.version }
+  }
+
+  const requirements = await readText(path.join(cwd, 'requirements.txt'))
+  if (requirements !== null) {
+    for (const raw of requirements.split('\n')) {
+      const line = raw.replace(/#.*/, '').trim()
+      if (!/^solvapay(\[[^\]]*\])?\s*([=<>~!;]|$)/i.test(line)) continue
+      const pinned = /^solvapay(\[[^\]]*\])?\s*==\s*([^\s;,]+)\s*(;.*)?$/i.exec(line)
+      if (!pinned) {
+        throw new Error(
+          `requirements.txt lists "${line}" without an exact version. Pin it (solvapay==<version>) or use a lockfile.`,
+        )
+      }
+      return { language: 'python', source: 'requirements.txt', version: pinned[2] }
+    }
+  }
+
+  const pyproject = await readText(path.join(cwd, 'pyproject.toml'))
+  if (pyproject !== null && DECLARES_SOLVAPAY.test(pyproject)) {
+    throw new Error(
+      'pyproject.toml depends on solvapay, but there is no uv.lock or poetry.lock to read the installed version from. Run `uv lock` (or `poetry lock`).',
+    )
+  }
+  return null
+}
+
+const GO_REQUIRE_RE = /^\s*(?:require\s+)?github\.com\/solvapay\/solvapay-sdk\/go\s+(v[^\s/]+)/m
+const GO_REPLACE_RE =
+  /^\s*(?:replace\s+)?github\.com\/solvapay\/solvapay-sdk\/go(?:\s+v\S+)?\s+=>\s+(\S+)(?:\s+(v\S+))?/m
+
+/**
+ * The Go SDK version go.mod requires. `null` when go.mod doesn't require it.
+ * Throws when a `replace` points it at a local directory.
+ */
+export const installedGoSdk = async (cwd: string): Promise<InstalledSdk | null> => {
+  const goMod = await readText(path.join(cwd, 'go.mod'))
+  if (goMod === null) return null
+  const required = GO_REQUIRE_RE.exec(goMod)
+  if (!required) return null
+  const replaced = GO_REPLACE_RE.exec(goMod)
+  if (replaced && !replaced[2]) {
+    throw new Error(
+      `go.mod replaces github.com/solvapay/solvapay-sdk/go with ${replaced[1]}. Doctor checks published versions only.`,
+    )
+  }
+  return { language: 'go', source: 'go.mod', version: replaced?.[2] ?? required[1] }
+}
+
+/** The command that pins `version` for the project's manager. */
+export const languageUpgradeCommand = (sdk: InstalledSdk, version: string): string => {
+  if (sdk.language === 'go')
+    return `go get github.com/solvapay/solvapay-sdk/go@${version} && go mod tidy`
+  const extras = sdk.extras ?? []
+  const requirement = `'solvapay${extras.length ? `[${extras.join(',')}]` : ''}==${version}'`
+  if (sdk.source === 'uv.lock') return `uv add ${requirement}`
+  if (sdk.source === 'poetry.lock') return `poetry add ${requirement}`
+  return `python -m pip install ${requirement} (and update requirements.txt)`
+}

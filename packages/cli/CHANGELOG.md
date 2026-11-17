@@ -1,5 +1,48 @@
 # solvapay
 
+## 1.5.1
+
+### Patch Changes
+
+- 5040df6: `solvapay init` no longer breaks a Python MCP server that runs on `mcp` 1.x.
+  - With `--features mcp`, init reads `uv.lock`, `poetry.lock`, `pyproject.toml`, `requirements.txt` and the project's `.py` files before the browser opens. It stops, with nothing written, when `mcp` is locked below 2, a requirement rules out `mcp` 2.3, the project uses `fastapi-mcp`, or code imports `mcp.server.fastmcp` or `fastapi_mcp`. Installing `solvapay[mcp]` there used to upgrade `mcp` to 2.x and leave a server that couldn't start. The message names each cause and links the `mcp` 2.x migration guide and the SolvaPay MCP guide. A project on fastmcp gets a warning that SolvaPay has no fastmcp adapter.
+  - init saves the product to `.env` before installing the SDK, so a failed install leaves a complete `.env`.
+  - With `--features mcp` in Python and Go, init adds `PORT` and `PUBLIC_BASE_URL` to `.env` when they're missing (`8080`, as the scaffolds do), links the language's MCP guide in its next steps and prints `npx -y solvapay@latest` (or `@preview`) commands.
+  - `solvapay doctor` scans a Python project's `.py` files. An import of `mcp.server.fastmcp` or `fastapi_mcp` fails the run once the project is on `mcp` 2.x and only warns while it is still on 1.x. The `SOLVAPAY_DEBUG` warning now shows only for TypeScript projects.
+  - Without a terminal (an AI agent, CI, `--yes`), init lists the account's products with their refs and prints the exact `npx -y solvapay@latest init --product <prd_...>` command, instead of only saying it skipped the choice.
+  - An empty value in `.env` (`SOLVAPAY_PRODUCT_REF=`) is read as unset. Before, init and doctor read the next line as its value, and replacing a key also removed the blank lines above it.
+
+- 2bf1da2: `solvapay verify` now connects the way MCP hosts do: it sends `initialize` and `notifications/initialized`, then pins the `mcp-session-id` the server issued. Servers that keep sessions, the Python and Go SDK defaults, no longer fail every check with HTTP 400 or "invalid during session initialization".
+
+  The paywall check calls each tool with arguments built from its `inputSchema` instead of a fixed `query`/`symbol`/`ticker`, so it reaches the gate on tools that validate their arguments first. It skips widget-only tools by their `audience: "ui"` tag, still runs when the tools check fails on leaked UI tools, and says which calls errored instead of blaming the customer's balance. A token the server rejects now fails the run.
+
+  `verify` never charges: it reads `account` before probing, and when the customer can already pay (`canCall: true`) it skips the paywall check and says to sign in as a customer with no plan. If `account` fails, it skips the probe too.
+
+- Updated dependencies [5040df6]
+  - @solvapay/init@0.6.1
+
+## 1.5.0
+
+### Minor Changes
+
+- 55885b2: `solvapay connect <merchant> --client claude --add-mcp` adds the merchant's MCP server to Claude Code at user scope once the owner approves, paying with the agent key. Claude Code reads the key through a `headersHelper` on each connection, so it never goes into Claude's config. On a merchant already connected, `--add-mcp` adds the server without asking the owner again.
+- b3feb5d: `solvapay launch <claude|hermes> <merchant>` starts Claude Code or Hermes on a merchant that takes SolvaPay agent payments, paying with an agent key its owner approved on their phone or in a browser; `solvapay connect <merchant> --client <claude|hermes>` (its launch name or `prov_…` reference) is the same connection made by an agent itself, as one command run again until it says connected (it replaces `connect start` and `connect finish`). Both moved here from the `@solvapay/agents` package, whose `solvapay-agents` bin now points at them. Payments run in sandbox with test money while live agent payments aren't open.
+- a611caa: The CLI handles Python and Go projects.
+  - `solvapay init` detects the project's language (`go.mod`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `requirements.txt`, `package.json`) before it touches anything, and installs the SDK exactly pinned with uv, Poetry or `go get`; for pip it prints the command. It no longer creates a `package.json` in a folder without one unless `--language ts` is passed: with no terminal, or `--yes`, a folder with no project files or files for two languages fails and names `--language`. New flags: `--language ts|python|go` and `--features mcp,agents,web` (`agents` is agent payments, a preview). Which SDK release it installs follows the CLI's own build: the stable CLI pins the newest stable release (and fails, naming the preview CLI, when a language has none), the preview CLI pins the newest preview.
+  - `solvapay doctor` checks the SDK version in every language the project uses (npm, PyPI, the Go module proxy) and prints the exact upgrade command. A project with no SolvaPay SDK in any language now fails instead of passing with "nothing to check".
+  - New `solvapay verify <server url>`: the TypeScript template's contract checks, for a running MCP server in any language.
+  - `create-solvapay --type mcp --language python|go` scaffolds a from-scratch paid MCP server with one paid and one free tool, tests, `.env.example`, a Dockerfile and Dependabot. A preview build of create-solvapay pins the newest SDK previews (for TypeScript too, from npm's `preview` tag); a stable build pins stable releases.
+
+### Patch Changes
+
+- ec5b929: `solvapay connect` tells the owner that payments run in sandbox with test money and nothing real is charged while live payments aren't open. When SolvaPay refuses because the merchant doesn't take agent payments yet, or because live agent payments aren't open yet, `launch` and `connect` say so in a plain sentence instead of printing the raw 403. The README now shows the arguments the CLI takes: `--client <claude|hermes>` and the merchant's launch name or `prov_…` reference.
+- ac65287: `solvapay connect` prints next steps an agent can run as they are: the command to run again names the preview CLI (`npx solvapay@preview`) when that is what is running, and quotes values such as a `--name` with spaces. Once connected with `--client claude`, it offers `launch` only when the merchant has a model API; for an MCP-only merchant it says to run the same command with `--add-mcp`.
+- ec77a0e: `solvapay` and `create-solvapay` depend on the exact `@solvapay/init` version they were released with. With a caret range, a preview build (`…-preview-<commit sha>`) resolved `@solvapay/init` to the preview whose commit sha sorts last alphabetically, not its own, and failed to start when that build lacked an export it uses.
+- 469aa57: `solvapay doctor` now checks that the project's installed `@solvapay/*` packages match npm: `latest`, or `preview` for a preview build. When any is behind, the check fails and prints the exact upgrade command for the project's package manager. A declared package that isn't installed, or a registry lookup that fails, also fails the check. `@solvapay/init` exports the check (`findOutdatedSolvapayPackages`, `solvapayDependencies`, `upgradeCommand`, `compareStable`).
+- Updated dependencies [a611caa]
+- Updated dependencies [469aa57]
+  - @solvapay/init@0.6.0
+
 ## 1.4.0
 
 ### Minor Changes

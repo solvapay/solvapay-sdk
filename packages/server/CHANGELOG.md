@@ -1,5 +1,70 @@
 # @solvapay/server changelog
 
+## 2.12.1
+
+### Patch Changes
+
+- b03ef76: The generated API types follow the platform: a product (`SdkProductResponse`, from `getProduct`, `listProducts`, `createProduct`, `updateProduct`, `cloneProduct` and the MCP bootstrap) no longer has `balance` or `totalTransactions`. The platform stopped writing them in March 2026 and now drops them; merchant revenue lives in the SolvaPay Console's Financials.
+
+## 2.12.0
+
+### Minor Changes
+
+- a2e2f9f: `@solvapay/server/fetch` now serves every route the `@solvapay/react` components call. New handlers: `processTopupPayment`, `attachBusinessDetails`, `getAutoRecharge` / `saveAutoRecharge` / `disableAutoRecharge`, `getUsage` and `checkLimits`, so `useUsage`, `useLimits`, auto-recharge and top-up completion work on a fetch backend. `solvapayRoutes()` serves them all at React's default paths (`/api/check-purchase`, `/api/list-plans`, …; `basePath` to move them), answering 404 for other paths and 405 with `Allow` for the wrong method.
+
+  `attachBusinessDetailsCore` now requires a verified user and attaches the details to that user's customer; a `customerRef` in the request body is no longer trusted.
+
+- 0874abe: `payable.http()`, `payable.next()` and `payable.gate()` no longer trust the caller to name the customer. Without `getCustomerRef`:
+  - `Authorization: Bearer` is trusted only when `verifyBearerToken` verifies it (`SOLVAPAY_JWT_SECRET`, `SOLVAPAY_JWKS_URL`, Supabase, or a gateway you opt into). The adapters no longer fall back to the `'test-jwt-secret'` key, `http://localhost:3000` issuer or `test-client-id` audience, which let anyone sign a token for any customer. A token nothing can verify gets a 401.
+  - `x-customer-ref` is trusted only with `SOLVAPAY_AUTH_TRUST_GATEWAY=true`; sent without it, the request gets a 401.
+  - `payable.next()` no longer charges an unidentified request to a shared `demo_user` customer: it is anonymous.
+  - A verified token's subject is always looked up by `externalRef` (new `ensureCustomerForUser`), never used as a customer ref, even when it starts with `cus_`.
+
+  If you relied on `x-customer-ref`, pass `getCustomerRef` with the user from your own auth. `AdapterUtils.extractFromJWT` now needs a secret (`options.secret` or `OAUTH_JWKS_SECRET`) and is deprecated.
+
+- 74dbdb7: `cancelPurchaseCore` and `reactivatePurchaseCore` now act only on the caller's own purchase. They used to cancel or reactivate any purchase reference they were given, without a verified user on the web routes, and for any signed-in customer through the MCP widget's `set_renewal` tool. They now resolve the verified user's customer, fetch the purchase (`GET /v1/sdk/purchases/{purchaseRef}`, the new `apiClient.getPurchase`), and answer `403 Forbidden` ("This purchase belongs to another customer") when it isn't theirs, or `401` with no verified user.
+- f2b03e5: The route helpers (`checkPurchaseCore`, `syncCustomerCore` and the routes built on them) always look the caller's user up by `externalRef`. Before, a user id starting with `cus_` was used as that customer, so a user whose id was `cus_<someone>` acted for them.
+
+  Server code that already knows the customer marks the request with the new `withCustomerRef(request, customerRef)`; the helpers then act for that customer as `ensureCustomer` does. `@solvapay/mcp-core`'s `buildSolvaPayRequest` marks the requests the widget tools build with the signed-in `customer_ref`, so MCP servers need no change.
+
+- 5960ef4: Route helpers now trust a bearer token only after verifying it. `getAuthenticatedUserCore` (behind every `@solvapay/server` route helper, the `@solvapay/server/fetch` handlers and the `@solvapay/next` helpers) and `getUserEmailFromRequest` / `getUserNameFromRequest` used to read an unverified JWT's `sub`, email and name when no `SOLVAPAY_JWT_SECRET` / `SUPABASE_JWT_SECRET` was set, so anyone could name another user. A token is now verified by the new `verifyBearerToken` from `@solvapay/auth`:
+  - HS256 with `SOLVAPAY_JWT_SECRET` or `SUPABASE_JWT_SECRET`, as before;
+  - ES256/RS256 against `SOLVAPAY_JWKS_URL`, or Supabase's JWKS derived from `SUPABASE_URL` (set automatically in Supabase Edge Functions);
+  - or, only when you opt in with `SOLVAPAY_AUTH_TRUST_GATEWAY=true`, a gateway that verified it already (Supabase Edge with `verify_jwt = true`).
+
+  With none of these, the routes answer `401` with a message naming the three options. `SOLVAPAY_AUTH_STRICT=true` now forbids gateway trust. The `@solvapay/server/fetch` handlers also drop a client-sent `x-user-id` header: they have no middleware in front of them, so identity comes from the verified token alone.
+
+  **Action needed** if your routes ran without a JWT secret: on Supabase Edge, nothing for projects on asymmetric signing keys; otherwise set `SOLVAPAY_JWT_SECRET`, `SOLVAPAY_JWKS_URL`, or `SOLVAPAY_AUTH_TRUST_GATEWAY=true`.
+
+- 80b8b65: Every error the server SDK raises on a known path now carries a stable `code` (and the API's `status`), matching the Python SDK, so callers can branch on `error.code` instead of the message:
+  - An API failure is coded with the API's own `code` when its JSON body has one, else `http_<status>`; a body that is not JSON is `non_json_response`.
+  - A missing product ref is `missing_product`; a missing secret key is `missing_secret`.
+  - A customer creation conflict the SDK cannot resolve is now a `SolvaPayError` coded `customer_conflict`, with status 409 (it was a plain `Error`).
+
+  `createSolvaPayClient` has `cancelPurchase` again (`POST /v1/sdk/purchases/{purchaseRef}/cancel`). It went missing in 2.10.0, so `cancelPurchaseCore` and the MCP widget's `set_renewal` cancel answered 500 "Cancel purchase method not available on SDK client". `attachBusinessDetails` again returns the API's answer as is and names itself when it fails (it had been reporting "Cancel purchase failed").
+
+- 261a5a7: `verifyWebhook` (Node and edge) refuses an empty secret with `error.code` `webhook_secret_missing` (`WEBHOOK_ERROR_CODES.secret`), before it reads the signature. HMAC accepts a zero-length key, so with an unset secret the Node verifier accepted any event signed with an empty key, and the edge verifier threw an uncoded `DataError`. If your webhook endpoint now fails every delivery with this code, set its signing secret (`whsec_…`).
+- 267440c: `verifyWebhook` (Node and edge) now fails with a stable `error.code` you can branch on: `webhook_signature_missing`, `webhook_signature_malformed`, `webhook_timestamp_out_of_tolerance`, `webhook_signature_invalid` or `webhook_payload_invalid` (exported as `WEBHOOK_ERROR_CODES`). It takes an optional `now` to check the timestamp against. A timestamp that is not all digits (`t=123abc`) is now rejected as malformed instead of being read as `123`, and spaces around the header's parts are allowed. Messages changed slightly; branch on the code, not the message.
+
+  The paywall message for a customer with no active plan no longer states the checkout links' expiry twice when it lists plans.
+
+### Patch Changes
+
+- 57026b6: The API client encodes customer and purchase references in URL paths (`getCustomer`, `getCustomerBalance`, `reactivatePurchase`); the customer reference can come from the client's `x-solvapay-customer-ref` header. The fetch handlers' CORS preflight now allows `PUT` and `DELETE`, so a cross-origin React app can save and disable auto-recharge.
+- 98a315b: A call gated by the SDK's own count now says so. When the last cached unit was already used, or more parallel calls arrived than units remained, `paywall.decide()` built the gate from the limits response it had counted down, which still said units were left. The customer was told they had no active plan (`upgrade_required`, with `remainingCalls` above 0). The gate now reads `limit_reached` with `remainingCalls: 0`, like a gate from the API.
+- d4e90a8: `saveAutoRechargeCore` saves auto-recharge for the verified user's customer even when the request body names another `customerRef`. It used to spread the client's input over the user's customer, so a signed-in user could change another customer's auto-recharge.
+- 5aa5637: Fixes found by the conformance coverage work:
+  - A customer create that fails with anything but 409 no longer leaves the user marked as attempted. The next call creates the customer instead of sending your own user id to the API as a customer ref.
+  - A plan priced only in tier bands is narrated as paid, not as "requires no payment".
+  - One unit of a plural meter reads in the singular: "per search", "per query", not "per searche".
+  - A recurring plan with a price but no currency says how often it bills ("is billed every year") instead of "is a year".
+  - `ctx.customer.plan` is read from the limits response's `planRef`, which the API sends. It was always null.
+  - The ChatGPT `tools/list` bypass finds the user-agent on MCP SDK v2's `ctx.http.req`, not only on `requestInfo`.
+  - An invalid `publicBaseUrl` throws a `SolvaPayError` with code `invalid_argument`.
+
+- Updated dependencies [80b8b65]
+  - @solvapay/core@1.9.0
+
 ## 2.11.0
 
 ### Minor Changes

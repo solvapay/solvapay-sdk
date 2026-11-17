@@ -1,5 +1,17 @@
 # @solvapay/mcp changelog
 
+## 0.5.2
+
+### Patch Changes
+
+- bb9b038: The protected-resource document is also served at its RFC 9728 path-suffixed URL, `/.well-known/oauth-protected-resource/mcp` (the well-known path with the MCP endpoint's path appended), by `createSolvaPayMcpFetch` and the Express `createMcpOAuthBridge`. Clients that start from the endpoint URL ask for it first and got a 404, then fell back to the root. There the resource is the endpoint URL (`https://host/mcp`), as RFC 9728 §3.3 requires; the root document still names the public base URL, and both name this server as the authorization server. A custom `mcpPath` moves the suffix with it.
+
+## 0.5.1
+
+### Patch Changes
+
+- 3b7fecd: Merchant MCP servers built with `createSolvaPayMcpFetch` or `createMcpOAuthBridge` now verify every bearer token with SolvaPay (`/v1/customer/auth/userinfo`) before serving a request. The customer comes from SolvaPay's answer, never from the token's own payload, so a token SolvaPay doesn't recognise is refused with the 401 sign-in challenge. If SolvaPay can't be reached, the request gets a 503 instead of being served. Valid answers are cached for 60 seconds. `@solvapay/mcp-core` adds `createSolvaPayTokenVerifier` and `verifyAuthInfoFromBearer`. Upgrade is strongly recommended.
+
 ## 0.5.0
 
 ### Minor Changes

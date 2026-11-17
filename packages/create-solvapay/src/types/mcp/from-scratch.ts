@@ -1,7 +1,7 @@
 /**
  * `from-scratch` mode — copy the mode-agnostic `_base/` tree, layer the
  * `from-scratch/` overlay (placeholder paid tool), substitute the user's
- * camelCase tool name into both filename and source, and write a
+ * tool name (snake_case, or camelCase) into both filename and source, and write a
  * minimal `.env` ready for `solvapay init` to populate.
  */
 
@@ -34,6 +34,8 @@ export type FromScratchInput = {
   skipInit?: boolean
   /** Pin `@solvapay/*` from the template instead of npm's latest (`--offline`). */
   offline?: boolean
+  /** Pin `@solvapay/*` from npm's `preview` tag (set by a preview scaffolder). */
+  preview?: boolean
   /**
    * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
    * into the scaffolded `.env`. Propagated separately from `options.dev`
@@ -53,6 +55,7 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
     skipInstall,
     skipInit,
     offline,
+    preview,
     dev,
   } = input
 
@@ -84,9 +87,12 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   process.stdout.write(
     offline
       ? '🔄 Pinning @solvapay/* to the versions this release ships with (--offline)…\n'
-      : '🔄 Resolving latest @solvapay/* versions from npm registry…\n',
+      : `🔄 Resolving ${preview ? 'preview' : 'latest'} @solvapay/* versions from npm registry…\n`,
   )
-  const versionMap = await resolveSolvapayVersions(undefined, { offline })
+  const versionMap = await resolveSolvapayVersions(undefined, {
+    offline,
+    distTag: preview ? 'preview' : 'latest',
+  })
   await patchSolvapayVersions(target, versionMap)
 
   const packageManager = await detectPackageManager(target)
@@ -98,13 +104,11 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
       process.stdout.write(`   ${message}\n`)
     })
     if (!installResult.ok) {
-      process.stdout.write(
-        `⚠️  ${installResult.command} failed (${installResult.warning ?? 'unknown error'}). ` +
-          `Run \`${packageManager} install\` manually inside ${target} before deploying.\n`,
+      throw new Error(
+        `\`${installResult.command}\` failed in ${target}: ${installResult.warning ?? 'unknown error'}`,
       )
-    } else {
-      process.stdout.write('✅ Dependencies installed\n')
     }
+    process.stdout.write('✅ Dependencies installed\n')
   }
 
   process.stdout.write('\n')
@@ -125,7 +129,7 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   }
   if (skipInit) {
     process.stdout.write(
-      `   npx -y solvapay@latest init   # --skip-init was set; run to wire up auth + product\n`,
+      `   npx -y solvapay@${preview ? 'preview' : 'latest'} init   # --skip-init was set; run to wire up auth + product\n`,
     )
   }
   process.stdout.write(

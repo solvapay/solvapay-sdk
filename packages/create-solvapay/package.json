@@ -1,6 +1,6 @@
 {
   "name": "create-solvapay",
-  "version": "0.8.2",
+  "version": "0.9.1",
   "description": "Scaffold SolvaPay-monetized projects — MCP servers on Cloudflare Workers and more.",
   "type": "module",
   "bin": {
@@ -33,7 +33,7 @@
     "sync:sdk-pins": "node scripts/sync-sdk-pins.mjs"
   },
   "dependencies": {
-    "@solvapay/init": "workspace:^"
+    "@solvapay/init": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

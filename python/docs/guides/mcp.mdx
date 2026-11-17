@@ -11,6 +11,8 @@ description: "Build an MCP server in Python whose customers sign in with SolvaPa
 - `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` set. See [Installation](/sdks/python/setup/installation).
 - A public HTTPS URL for the server. In development, use a tunnel such as [ngrok](https://ngrok.com).
 
+To start from a working project instead, run `npm create solvapay@latest my-mcp-server -- --type mcp --language python`: it scaffolds this server with one paid and one free tool, tests and a Dockerfile.
+
 ## Create the server
 
 Save this as `server.py`:
@@ -26,6 +28,7 @@ mcp = create_solvapay_mcp_server(
     solvapay=create_solvapay(),
     public_base_url=os.environ["PUBLIC_BASE_URL"],  # where MCP clients reach this server
     name="research",
+    hide_tools_by_audience=["ui"],  # keep the widget's own tools out of tools/list
 )
 
 
@@ -38,6 +41,8 @@ mcp.register_payable("quote", handler=quote, description="Latest price for a sym
 
 app = mcp.http_app()  # the MCP endpoint is /mcp
 ```
+
+The endpoint is stateless, as the TypeScript server's is: it issues no `mcp-session-id`, so any instance behind a load balancer can answer any request. `mcp.http_app(stateless_http=False)` keeps an in-memory session per client instead; use it only on a single instance or with sticky routing.
 
 A handler is an async function. Its parameters, except the `ResponseContext`, become the tool's input schema. Use `Annotated[str, Field(description=...)]` to describe a parameter to the model. The handler must return `ctx.respond(...)`.
 
@@ -198,5 +203,5 @@ Other options: `instructions`, `version`, `mcp_path` (default `/mcp`), `oauth_pa
 ## Next steps
 
 - [Examples](/sdks/python/guides/examples): a complete paid MCP server.
-- [Agent payments](/sdks/python/guides/agents): let SolvaPay agents pay per call.
+- [Agent payments (preview)](/sdks/python/guides/agents): let SolvaPay agents pay per call.
 - The TypeScript equivalent is the [MCP server guide](/sdks/typescript/guides/mcp).

@@ -1,6 +1,6 @@
 {
   "name": "solvapay",
-  "version": "1.4.0",
+  "version": "1.5.1",
   "description": "SolvaPay CLI",
   "type": "module",
   "bin": {
@@ -29,7 +29,7 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
-    "@solvapay/init": "workspace:^",
+    "@solvapay/init": "workspace:*",
     "yaml": "2.8.1"
   },
   "devDependencies": {

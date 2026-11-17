@@ -1,5 +1,51 @@
 # create-solvapay
 
+## 0.9.1
+
+### Patch Changes
+
+- 1971bee: A failed `npm install` now stops the scaffold with an error and a non-zero exit, as `uv sync` and `go mod tidy` already did for Python and Go. TypeScript MCP and next-auth0 projects used to print a warning, skip nothing, and finish with exit 0, leaving a project with no `node_modules` that looked complete.
+- 0981bf1: New MCP projects start on the SDK released with it: `@solvapay/mcp` 0.5.1, `@solvapay/mcp-core` 0.6.0, `@solvapay/server` 2.12.0 and `@solvapay/react` 2.7.2.
+- 5040df6: `solvapay init` no longer breaks a Python MCP server that runs on `mcp` 1.x.
+  - With `--features mcp`, init reads `uv.lock`, `poetry.lock`, `pyproject.toml`, `requirements.txt` and the project's `.py` files before the browser opens. It stops, with nothing written, when `mcp` is locked below 2, a requirement rules out `mcp` 2.3, the project uses `fastapi-mcp`, or code imports `mcp.server.fastmcp` or `fastapi_mcp`. Installing `solvapay[mcp]` there used to upgrade `mcp` to 2.x and leave a server that couldn't start. The message names each cause and links the `mcp` 2.x migration guide and the SolvaPay MCP guide. A project on fastmcp gets a warning that SolvaPay has no fastmcp adapter.
+  - init saves the product to `.env` before installing the SDK, so a failed install leaves a complete `.env`.
+  - With `--features mcp` in Python and Go, init adds `PORT` and `PUBLIC_BASE_URL` to `.env` when they're missing (`8080`, as the scaffolds do), links the language's MCP guide in its next steps and prints `npx -y solvapay@latest` (or `@preview`) commands.
+  - `solvapay doctor` scans a Python project's `.py` files. An import of `mcp.server.fastmcp` or `fastapi_mcp` fails the run once the project is on `mcp` 2.x and only warns while it is still on 1.x. The `SOLVAPAY_DEBUG` warning now shows only for TypeScript projects.
+  - Without a terminal (an AI agent, CI, `--yes`), init lists the account's products with their refs and prints the exact `npx -y solvapay@latest init --product <prd_...>` command, instead of only saying it skipped the choice.
+  - An empty value in `.env` (`SOLVAPAY_PRODUCT_REF=`) is read as unset. Before, init and doctor read the next line as its value, and replacing a key also removed the blank lines above it.
+
+- c5f8d2d: The Python and Go MCP servers are stateless by default, as the TypeScript server is.
+  - Python `http_app()` and Go `Handler()` issue no `mcp-session-id`, and a request needs no earlier `initialize` on the same instance. In-memory sessions broke once a load balancer spread one client over several instances, and clients that send one request per call got `400 Missing session ID` (Python) or `method "tools/list" is invalid during session initialization` (Go). For sessions, pass `http_app(stateless_http=False)` in Python or set `MCPServerOptions.Stateful` in Go, on a single instance or with sticky routing.
+  - The Python and Go scaffolds from `create-solvapay` pass `hide_tools_by_audience=["ui"]` / `HideToolsByAudience: []string{"ui"}`, as the TypeScript template does, so the widget's own tools stay out of `tools/list` and `solvapay verify` passes on a fresh scaffold. The MCP guides' first example does the same.
+
+- Updated dependencies [5040df6]
+  - @solvapay/init@0.6.1
+
+## 0.9.0
+
+### Minor Changes
+
+- a611caa: The CLI handles Python and Go projects.
+  - `solvapay init` detects the project's language (`go.mod`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `requirements.txt`, `package.json`) before it touches anything, and installs the SDK exactly pinned with uv, Poetry or `go get`; for pip it prints the command. It no longer creates a `package.json` in a folder without one unless `--language ts` is passed: with no terminal, or `--yes`, a folder with no project files or files for two languages fails and names `--language`. New flags: `--language ts|python|go` and `--features mcp,agents,web` (`agents` is agent payments, a preview). Which SDK release it installs follows the CLI's own build: the stable CLI pins the newest stable release (and fails, naming the preview CLI, when a language has none), the preview CLI pins the newest preview.
+  - `solvapay doctor` checks the SDK version in every language the project uses (npm, PyPI, the Go module proxy) and prints the exact upgrade command. A project with no SolvaPay SDK in any language now fails instead of passing with "nothing to check".
+  - New `solvapay verify <server url>`: the TypeScript template's contract checks, for a running MCP server in any language.
+  - `create-solvapay --type mcp --language python|go` scaffolds a from-scratch paid MCP server with one paid and one free tool, tests, `.env.example`, a Dockerfile and Dependabot. A preview build of create-solvapay pins the newest SDK previews (for TypeScript too, from npm's `preview` tag); a stable build pins stable releases.
+
+- 6f8eb1e: Scaffolds no longer start, or stay, behind the SDK.
+  - If the npm registry lookup for `@solvapay/*` fails, the scaffold stops with an error naming each package and why, instead of quietly pinning old fallback versions. Pass `--offline` to pin the versions this release ships with on purpose.
+  - The template's `@solvapay/*` pins are exact and current (`@solvapay/mcp` 0.5.0, `@solvapay/mcp-core` 0.5.0, `@solvapay/server` 2.11.0, `@solvapay/react` 2.7.1). `pnpm --filter create-solvapay sync:sdk-pins` keeps them on npm's `latest` after each release.
+  - A generated project's `npm run deploy` stops when an installed `@solvapay/*` package is behind npm and prints the exact upgrade command. `--allow-outdated` deploys those versions on purpose.
+  - Generated projects ship `.github/dependabot.yml`, which opens one weekly pull request moving all `@solvapay/*` packages to npm's latest together.
+
+- 82369d2: `--tool-name` takes snake_case for TypeScript MCP servers, the MCP naming convention, and defaults to `hello_tool`. The name is used as-is for the file and the registered tool, and the generated function is `register<PascalCase>` (`generate_haiku` → `registerGenerateHaiku`), so no rename is needed after scaffolding. camelCase is still accepted.
+
+### Patch Changes
+
+- ec77a0e: `solvapay` and `create-solvapay` depend on the exact `@solvapay/init` version they were released with. With a caret range, a preview build (`…-preview-<commit sha>`) resolved `@solvapay/init` to the preview whose commit sha sorts last alphabetically, not its own, and failed to start when that build lacked an export it uses.
+- Updated dependencies [a611caa]
+- Updated dependencies [469aa57]
+  - @solvapay/init@0.6.0
+
 ## 0.8.2
 
 ### Patch Changes

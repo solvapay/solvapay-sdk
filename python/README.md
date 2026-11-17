@@ -10,6 +10,20 @@ pip install 'solvapay[web]'     # the routes @solvapay/react calls
 
 Python 3.10+. Typed (`py.typed`), async-first, with blocking twins for the API client.
 
+## With an AI coding agent
+
+Install the SolvaPay skills, then ask your agent for what you want, naming the product to bill:
+
+```bash
+npx skills add solvapay/skills -a claude-code -y   # other agents: -a <agent>
+```
+
+> Add SolvaPay to this FastAPI app so that `GET /forecast` is paid per call. Bill product `prd_…`.
+
+Installed during a Claude Code session? It loads right away if `.claude/skills/` existed when the session started; otherwise type `/reload-skills`. Or skip the install: start the prompt with "First run `npx -y skills use solvapay/skills --skill app-integration` and follow the skill it prints."
+
+The agent runs `npx -y solvapay@latest init --language python --product prd_…`; approve it. It opens your browser to sign in to SolvaPay and writes `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` to `.env`. Create the product, with the plan that sets the price, in [SolvaPay Console](https://app.solvapay.com/products) first. If your app has no sign-in yet, decide how callers are identified first: the paywall bills your own user id.
+
 ## Configure
 
 ```bash
@@ -18,7 +32,7 @@ export SOLVAPAY_PRODUCT_REF=prd_...         # the product paid calls bill agains
 export SOLVAPAY_API_BASE_URL=...            # optional; defaults to https://api.solvapay.com
 ```
 
-Copy the secret key and product reference from SolvaPay Console (Developers → API keys, and the product's page). `npx solvapay init` writes them to `.env` too, but it is a Node.js tool and installs npm packages in a folder without `package.json`.
+Copy the secret key and product reference from SolvaPay Console (Developers → API keys, and the product's page), or run `npx -y solvapay@latest init --language python --product prd_…`: it signs you in, writes both to `.env` and pins the SDK with uv or Poetry. The SDK reads environment variables, not `.env`; load it with `python-dotenv` or export them.
 
 ## Make a function paid
 
@@ -106,12 +120,15 @@ gets them, since its widget can only call listed tools.
 Its Content Security Policy allows Stripe and the SolvaPay API. Add domains with
 `csp={"connectDomains": [...], "resourceDomains": [...], "frameDomains": [...]}`.
 
-### Paid by agents
+### Paid by agents (preview)
 
 `solvapay.agents.mcp.create_agent_mcp_route` serves an MCP server that SolvaPay
 agents pay for per call: each paid tool call is authorized with SolvaPay before
 it runs and completed at the cost the upstream reports. Install
 `solvapay[agents,mcp]`.
+
+Agent payments are a preview. SolvaPay turns them on per merchant, and live
+agent payments aren't open yet, so build and test with a sandbox key.
 
 ## React web checkout
 

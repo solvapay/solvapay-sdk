@@ -21,6 +21,22 @@ The base package gives you paid functions, the API client and webhook verificati
 | `pip install 'solvapay[mcp]'` | Paid MCP servers, on the official MCP Python SDK (`mcp`) and Starlette |
 | `pip install 'solvapay[agents,mcp]'` | Agent payments (preview). `agents` adds JWT verification; the agent MCP route also needs `mcp` |
 
+## Set up with the CLI
+
+In an existing project, `npx solvapay init` signs you in, writes `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` to `.env`, and adds `solvapay` pinned exactly with uv or Poetry (for pip it prints the install command). It needs Node.js 22 or later to run. The SDK reads environment variables, not `.env`, so load `.env` when your app starts (`python-dotenv`) or export the variables.
+
+```bash
+npx solvapay init --features mcp
+```
+
+For a new paid MCP server, scaffold one instead:
+
+```bash
+npm create solvapay@latest my-mcp-server -- --type mcp --language python
+```
+
+`npx solvapay doctor` checks that the SDK is the newest release and prints the upgrade command. See [CLI setup](/sdks/typescript/setup/cli) for the flags.
+
 ## Set environment variables
 
 | Variable | Required | What it is |

@@ -5577,11 +5577,6 @@ type SdkPlatformConfigResponseDto struct {
 
 // SdkProductResponse defines model for SdkProductResponse.
 type SdkProductResponse struct {
-	// Balance Product balance in cents
-	//
-	// Example: 0
-	Balance float32 `json:"balance"`
-
 	// Config Product-specific configuration
 	Config *ProductConfigDto `json:"config,omitempty"`
 
@@ -5633,11 +5628,6 @@ type SdkProductResponse struct {
 	//
 	// Example: active
 	Status string `json:"status"`
-
-	// TotalTransactions Total number of transactions
-	//
-	// Example: 0
-	TotalTransactions float32 `json:"totalTransactions"`
 
 	// UpdatedAt Last update timestamp
 	UpdatedAt string `json:"updatedAt"`

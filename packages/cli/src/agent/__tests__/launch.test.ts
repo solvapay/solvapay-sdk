@@ -242,6 +242,16 @@ describe('the spend on exit', () => {
   })
 })
 
+describe('plain refusals', () => {
+  it("says plainly that live agent payments aren't open yet when the key is refused for it", async () => {
+    await saveKey(env, { providerRef: PROV, agentKey: 'agk_SECRET', agentRef: 'agt_A', merchantName: 'Opper', api: API })
+    vi.stubGlobal('fetch', async () =>
+      Response.json({ code: 'agent_live_disabled', message: 'Live agent payments are switched off' }, { status: 403 }),
+    )
+    await expect(launch(['claude', PROV, ...MODEL_FLAGS])).rejects.toThrow("Live agent payments aren't open yet. Use sandbox")
+  })
+})
+
 describe('launch hermes', () => {
   it("puts the key and the merchant's model provider in Hermes's home, then starts a chat on it", async () => {
     env.HERMES_HOME = join(env.SOLVAPAY_HOME, '..', '.hermes')

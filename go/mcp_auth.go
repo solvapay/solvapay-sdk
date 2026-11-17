@@ -443,6 +443,8 @@ func (s *MCPServer) logDCRFailure(status int, body string) {
 func (s *MCPServer) Handler() http.Handler {
 	streamable := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return s.server }, &mcp.StreamableHTTPOptions{
 		Logger: s.logger,
+		// No mcp-session-id unless Stateful is set: see MCPServerOptions.Stateful.
+		Stateless: !s.stateful,
 		// The MCP SDK refuses a request that arrives on a loopback address with
 		// a public Host, against DNS rebinding of unauthenticated local servers.
 		// That is every request behind a tunnel or proxy on the same machine
@@ -477,12 +479,16 @@ func (s *MCPServer) Handler() http.Handler {
 			}
 			applyNativeCORS(r, w.Header())
 			w.WriteHeader(http.StatusNotFound)
-		case protectedResourcePath, authorizationServerPath:
+		case protectedResourcePath, protectedResourcePath + mcpPathSuffix(s.mcpPath), authorizationServerPath:
 			if r.Method != http.MethodGet {
 				notFound(w)
 				return
 			}
 			document := protectedResourceMetadata(s.publicBaseURL)
+			if suffix := mcpPathSuffix(s.mcpPath); suffix != "" && r.URL.Path == protectedResourcePath+suffix {
+				// RFC 9728 §3.3: here the resource is the endpoint the client started from.
+				document["resource"] = s.publicBaseURL + suffix
+			}
 			if r.URL.Path == authorizationServerPath {
 				document = authorizationServerMetadata(s.publicBaseURL, paths)
 			}
@@ -649,4 +655,16 @@ func (s *MCPServer) serveMCP(w http.ResponseWriter, r *http.Request, verified ht
 	applyNativeCORS(r, w.Header())
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	verified.ServeHTTP(w, r)
+}
+
+// mcpPathSuffix is the MCP path as the RFC 9728 path-suffixed protected-resource
+// URL appends it ("/mcp" for "mcp/" or "/mcp/"). The document served there names
+// that endpoint as the resource; the root one keeps the public base URL.
+// An MCP path of "/" gives "", so only the root document is served.
+func mcpPathSuffix(mcpPath string) string {
+	trimmed := strings.TrimRight(mcpPath, "/")
+	if trimmed != "" && !strings.HasPrefix(trimmed, "/") {
+		return "/" + trimmed
+	}
+	return trimmed
 }

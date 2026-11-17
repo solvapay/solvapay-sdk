@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { pascalize } from './types/mcp/scaffold'
 import {
   hasMcpSpecificFlags,
   inferMcpMode,
@@ -208,6 +209,7 @@ describe('validateToolName', () => {
 
   it('rejects PascalCase', () => {
     expect(validateToolName('FetchPet').ok).toBe(false)
+    expect(validateToolName('Fetch_pet').ok).toBe(false)
   })
 
   it('rejects kebab-case', () => {
@@ -216,5 +218,40 @@ describe('validateToolName', () => {
 
   it('rejects empty', () => {
     expect(validateToolName('').ok).toBe(false)
+  })
+})
+
+describe('--language', () => {
+  it('parses it as a common flag and skips it in the MCP parser', () => {
+    const argv = ['srv', '--type', 'mcp', '--language', 'python', '--tool-name', 'get_quote']
+    expect(parseArgs(argv)).toMatchObject({ language: 'python', type: 'mcp', preview: false })
+    expect(parseMcpArgs(argv)).toMatchObject({ toolName: 'get_quote' })
+    expect(parseMcpArgs(argv).unknownFlag).toBeUndefined()
+  })
+
+  it('has no --preview flag: the scaffolder build decides', () => {
+    expect(parseArgs(['srv', '--preview']).unknownFlag).toBe('--preview')
+  })
+
+  it('passes preview to init only when set', () => {
+    expect(toInitOptions({ ...parseArgs(['srv']), preview: true })).toMatchObject({ preview: true })
+    expect(toInitOptions(parseArgs(['srv']))).not.toHaveProperty('preview')
+  })
+})
+
+describe('pascalize', () => {
+  it('turns snake_case and camelCase into one PascalCase identifier', () => {
+    expect(pascalize('generate_haiku')).toBe('GenerateHaiku')
+    expect(pascalize('generateHaiku')).toBe('GenerateHaiku')
+    expect(pascalize('get_item_2')).toBe('GetItem2')
+    expect(pascalize('hello')).toBe('Hello')
+  })
+})
+
+describe('snake_case tool names', () => {
+  it('accepts snake_case and camelCase', () => {
+    expect(validateToolName('generate_haiku')).toEqual({ ok: true, name: 'generate_haiku' })
+    expect(validateToolName('get_item_2')).toEqual({ ok: true, name: 'get_item_2' })
+    expect(validateToolName('generateHaiku')).toEqual({ ok: true, name: 'generateHaiku' })
   })
 })
