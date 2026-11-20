@@ -43,8 +43,29 @@ app.post('/webhooks', express.raw({ type: 'application/json' }), (req: Request, 
       secret: solvapayWebhookSecret,
     })
 
+    // `externalRef` (customer events) and `customerExternalRef` (purchase events)
+    // are your own id for the customer, or null until you set one with
+    // PATCH /v1/sdk/customers/{reference}. A customer who signs in through the
+    // OAuth bridge starts unlinked.
     if (event.type === 'customer.created') {
-      console.warn('Received customer.created webhook', event.data.object)
+      const { reference, email, externalRef } = event.data.object
+      console.warn(
+        externalRef
+          ? `customer.created: ${reference} is your user ${externalRef}`
+          : `customer.created: ${reference} (${email}) is not linked to one of your users yet`,
+      )
+    }
+
+    if (event.type.startsWith('purchase.')) {
+      // Purchase payloads are not typed by the SDK yet; these fields are on every purchase event.
+      const { reference, customer, customerExternalRef } = event.data.object as {
+        reference: string
+        customer: string
+        customerExternalRef: string | null
+      }
+      console.warn(
+        `${event.type}: purchase ${reference} for customer ${customer}, your user ${customerExternalRef ?? '(not linked yet)'}`,
+      )
     }
 
     if (event.type === 'payment.succeeded') {

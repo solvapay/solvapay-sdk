@@ -80,6 +80,21 @@ in a `switch`.
 
 See the [central Webhooks documentation](/webhooks#event-types) for the full table and per-event payload schemas.
 
+### Matching events to your own records
+
+Customer events (`customer.created`, `customer.updated`, `customer.deleted`) carry `externalRef` in
+`event.data.object`: your own ID for the customer, set when you create or update it. Every `purchase.*`
+event carries `customerExternalRef`, the same value for the purchase's customer. Both are `null` when
+you have not set one. Use them to find your own record without a lookup or an email match.
+
+```typescript
+if (event.type === 'customer.updated') {
+  const userId = event.data.object.externalRef // string | null | undefined
+}
+```
+
+Use a stable, opaque ID as `externalRef`, not an email address, since it appears in webhook payloads.
+
 ### Subscribing to specific events
 
 Endpoints receive **all events by default**. To receive only a subset, set `enabledEvents`
