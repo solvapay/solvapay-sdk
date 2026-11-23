@@ -26,3 +26,10 @@ examples/  docs/  scripts/
 - **A language publishes only when its pin matches `conformance/cases.lock`.**
 - Never hand-edit generated files: `openapi/sdk-v1.json`, `conformance/cases.lock`,
   a language's pin, generated clients, the widget copy in a package.
+- **Payload types come from the spec.** Request, response and webhook payload
+  types are generated from `openapi/sdk-v1.json` wherever feasible, in every
+  language. Don't hand-write one. If a payload is missing from the spec, add its
+  schema in the platform first, then sync and regenerate. Hand-write a type only
+  where a schema is not feasible, and say why in the PR. The webhook payload types
+  in `packages/server/src/types/webhook.ts` are hand-written for now, because the
+  spec does not describe webhook payloads yet.
