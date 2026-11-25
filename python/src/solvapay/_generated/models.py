@@ -163,7 +163,9 @@ class AuthorizeCallResponseDto3(BaseModel):
     approval: Approval
     call_ref: Annotated[str, Field(alias="callRef")]
     message: str
-    retry_after_seconds: Annotated[int, Field(alias="retryAfterSeconds")]
+    retry_after_seconds: Annotated[
+        int, Field(alias="retryAfterSeconds", ge=-9007199254740991, le=9007199254740991)
+    ]
     status: Literal["waiting"]
 
 
@@ -280,7 +282,12 @@ class Event(BaseModel):
     outcome: Literal["success", "paywall", "fail"] = "success"
     product_ref: Annotated[str | None, Field(alias="productRef", max_length=20)] = None
     purchase_ref: Annotated[str | None, Field(alias="purchaseRef", max_length=20)] = None
-    timestamp: str
+    timestamp: Annotated[
+        str | None,
+        Field(
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        ),
+    ] = None
     units: Annotated[int, Field(ge=0, le=100000)] = 1
 
 
@@ -450,13 +457,13 @@ class FreeAllowance(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    cap: Annotated[int | None, Field(gt=0)] = None
+    cap: Annotated[int | None, Field(gt=0, le=9007199254740991)] = None
     meter: Annotated[str | None, Field(min_length=1, pattern="^free-[a-z0-9-]+$")] = None
     """
     Free meter name. Must match `/^free-[a-z0-9-]+$/`.
     """
     scope: Literal["rolling_window", "lifetime"] | None = None
-    window_days: Annotated[int | None, Field(alias="windowDays", ge=1)] = None
+    window_days: Annotated[int | None, Field(alias="windowDays", ge=1, le=9007199254740991)] = None
 
 
 class CheckLimitRequest(BaseModel):
@@ -490,8 +497,8 @@ class Cost1(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount: Annotated[str | None, Field(pattern="^\\d+(\\.\\d{1,8})?$")] = None
-    currency: Annotated[str | None, Field(pattern="^[A-Z]{3}$")] = None
+    amount: Annotated[str, Field(pattern="^\\d+(\\.\\d{1,8})?$")]
+    currency: Annotated[str, Field(pattern="^[A-Z]{3}$")]
 
 
 class CompleteCallDto(BaseModel):
@@ -530,8 +537,8 @@ class Options(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0)]
-    currency: str
+    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0, le=9007199254740991)]
+    currency: Annotated[str, Field(max_length=3, min_length=3)]
     kind: Literal["charge"]
     label: str | None = None
     meter: Annotated[str | None, Field(min_length=1)] = None
@@ -544,8 +551,13 @@ class Options1(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    anchor: str | None = None
-    count: Annotated[int | None, Field(ge=1)] = None
+    anchor: Annotated[
+        str | None,
+        Field(
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        ),
+    ] = None
+    count: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
     interval: Literal["week", "month", "year"]
     kind: Literal["billingCycle"]
 
@@ -555,8 +567,8 @@ class Charge(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0)]
-    currency: str
+    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0, le=9007199254740991)]
+    currency: Annotated[str, Field(max_length=3, min_length=3)]
     label: str | None = None
     meter: Annotated[str | None, Field(min_length=1)] = None
     per: Literal["unit", "seat", "flat"]
@@ -568,11 +580,11 @@ class Options2(BaseModel):
         populate_by_name=True,
     )
     charge: Charge
-    from_: Annotated[int, Field(alias="from", ge=0)]
+    from_: Annotated[int, Field(alias="from", ge=0, le=9007199254740991)]
     kind: Literal["tier"]
     label: str | None = None
     mode: Literal["graduated", "volume"]
-    to: Annotated[int | None, Field(ge=0)]
+    to: Annotated[int | None, Field(ge=0, le=9007199254740991)]
 
 
 class Options3(BaseModel):
@@ -580,13 +592,13 @@ class Options3(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    cap: Annotated[int, Field(ge=0)]
+    cap: Annotated[int, Field(ge=0, le=9007199254740991)]
     kind: Literal["limit"]
     label: str | None = None
     meter: Annotated[str, Field(min_length=1)]
     on_exceed: Annotated[Literal["block", "draw_credits"], Field(alias="onExceed")]
     scope: Literal["billing_period", "lifetime", "rolling_window"]
-    window_days: Annotated[int | None, Field(alias="windowDays", ge=1)] = None
+    window_days: Annotated[int | None, Field(alias="windowDays", ge=1, le=9007199254740991)] = None
 
 
 class Options4(BaseModel):
@@ -606,7 +618,7 @@ class Options5(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    days: Annotated[int, Field(ge=1)]
+    days: Annotated[int, Field(ge=1, le=9007199254740991)]
     kind: Literal["trial"]
     label: str | None = None
     on_end: Annotated[Literal["convert", "cancel"], Field(alias="onEnd")]
@@ -620,13 +632,13 @@ class Options6(BaseModel):
     applies_to: Annotated[
         Literal["recurring", "setup", "usage", "all"] | None, Field(alias="appliesTo")
     ] = None
-    currency: str | None = None
-    cycles: Annotated[int | None, Field(ge=1)] = None
+    currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
+    cycles: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
     duration: Literal["once", "repeating", "forever"]
     kind: Literal["discount"]
     label: str | None = None
     mode: Literal["percentage", "fixed"]
-    value: Annotated[int, Field(gt=0)]
+    value: Annotated[int, Field(gt=0, le=9007199254740991)]
 
 
 class Options7(BaseModel):
@@ -784,7 +796,12 @@ class CreateCustomerRequest(BaseModel):
         populate_by_name=True,
     )
     description: Annotated[str | None, Field(max_length=1000)] = None
-    email: str
+    email: Annotated[
+        str,
+        Field(
+            pattern="^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        ),
+    ]
     external_ref: Annotated[str | None, Field(alias="externalRef", max_length=50)] = None
     metadata: dict[str, Any] | None = None
     name: Annotated[
@@ -830,7 +847,7 @@ class AutoRecharge(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    currency: str | None = None
+    currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
     enabled: bool | None = None
     max_monthly_spend_major: Annotated[
         int | float | None, Field(alias="maxMonthlySpendMajor", gt=0.0, le=10000.0)
@@ -851,7 +868,7 @@ class CreatePaymentIntentDto(BaseModel):
     )
     amount: Annotated[int | None, Field(ge=100, le=10000000)] = None
     auto_recharge: Annotated[AutoRecharge | None, Field(alias="autoRecharge")] = None
-    currency: str | None = None
+    currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
     customer_ref: Annotated[str, Field(alias="customerRef", max_length=20, min_length=1)]
     description: Annotated[str | None, Field(max_length=500)] = None
     plan_ref: Annotated[str | None, Field(alias="planRef", max_length=20, min_length=1)] = None
@@ -867,8 +884,8 @@ class Options9(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0)]
-    currency: str
+    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0, le=9007199254740991)]
+    currency: Annotated[str, Field(max_length=3, min_length=3)]
     kind: Literal["charge"]
     label: str | None = None
     meter: Annotated[str | None, Field(min_length=1)] = None
@@ -881,8 +898,13 @@ class Options10(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    anchor: str | None = None
-    count: Annotated[int | None, Field(ge=1)] = None
+    anchor: Annotated[
+        str | None,
+        Field(
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        ),
+    ] = None
+    count: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
     interval: Literal["week", "month", "year"]
     kind: Literal["billingCycle"]
 
@@ -893,11 +915,11 @@ class Options11(BaseModel):
         populate_by_name=True,
     )
     charge: Charge
-    from_: Annotated[int, Field(alias="from", ge=0)]
+    from_: Annotated[int, Field(alias="from", ge=0, le=9007199254740991)]
     kind: Literal["tier"]
     label: str | None = None
     mode: Literal["graduated", "volume"]
-    to: Annotated[int | None, Field(ge=0)]
+    to: Annotated[int | None, Field(ge=0, le=9007199254740991)]
 
 
 class Options12(BaseModel):
@@ -905,13 +927,13 @@ class Options12(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    cap: Annotated[int, Field(ge=0)]
+    cap: Annotated[int, Field(ge=0, le=9007199254740991)]
     kind: Literal["limit"]
     label: str | None = None
     meter: Annotated[str, Field(min_length=1)]
     on_exceed: Annotated[Literal["block", "draw_credits"], Field(alias="onExceed")]
     scope: Literal["billing_period", "lifetime", "rolling_window"]
-    window_days: Annotated[int | None, Field(alias="windowDays", ge=1)] = None
+    window_days: Annotated[int | None, Field(alias="windowDays", ge=1, le=9007199254740991)] = None
 
 
 class Options13(BaseModel):
@@ -931,7 +953,7 @@ class Options14(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    days: Annotated[int, Field(ge=1)]
+    days: Annotated[int, Field(ge=1, le=9007199254740991)]
     kind: Literal["trial"]
     label: str | None = None
     on_end: Annotated[Literal["convert", "cancel"], Field(alias="onEnd")]
@@ -945,13 +967,13 @@ class Options15(BaseModel):
     applies_to: Annotated[
         Literal["recurring", "setup", "usage", "all"] | None, Field(alias="appliesTo")
     ] = None
-    currency: str | None = None
-    cycles: Annotated[int | None, Field(ge=1)] = None
+    currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
+    cycles: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
     duration: Literal["once", "repeating", "forever"]
     kind: Literal["discount"]
     label: str | None = None
     mode: Literal["percentage", "fixed"]
-    value: Annotated[int, Field(gt=0)]
+    value: Annotated[int, Field(gt=0, le=9007199254740991)]
 
 
 class Options16(BaseModel):
@@ -977,11 +999,15 @@ class CreatePlanRequest(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    access_expiry_days: Annotated[int | None, Field(alias="accessExpiryDays", ge=0)] = None
+    access_expiry_days: Annotated[
+        int | None, Field(alias="accessExpiryDays", ge=0, le=9007199254740991)
+    ] = None
     currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
     description: Annotated[str | None, Field(max_length=500)] = None
     features: dict[str, Any] | None = None
-    max_active_users: Annotated[int | None, Field(alias="maxActiveUsers", ge=0)] = None
+    max_active_users: Annotated[
+        int | None, Field(alias="maxActiveUsers", ge=0, le=9007199254740991)
+    ] = None
     metadata: dict[str, Any] | None = None
     name: Annotated[
         str, Field(max_length=200, min_length=2, pattern="^[\\p{L}\\p{N} .,'\"&\\/()+:\\-]*$")
@@ -1010,7 +1036,9 @@ class Config(BaseModel):
     )
     delivery_method: Annotated[str | None, Field(alias="deliveryMethod")] = None
     fulfillment_type: Annotated[str | None, Field(alias="fulfillmentType")] = None
-    validity_period: Annotated[int | None, Field(alias="validityPeriod", gt=0)] = None
+    validity_period: Annotated[
+        int | None, Field(alias="validityPeriod", gt=0, le=9007199254740991)
+    ] = None
 
 
 class CreateProductRequest(BaseModel):
@@ -1062,7 +1090,12 @@ class CreateUsageRequest(BaseModel):
     outcome: Literal["success", "paywall", "fail"] = "success"
     product_ref: Annotated[str | None, Field(alias="productRef", max_length=20)] = None
     purchase_ref: Annotated[str | None, Field(alias="purchaseRef", max_length=20)] = None
-    timestamp: str
+    timestamp: Annotated[
+        str | None,
+        Field(
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        ),
+    ] = None
     units: Annotated[int, Field(ge=0, le=100000)] = 1
 
 
@@ -1245,7 +1278,7 @@ class GrantCustomerCreditsRequest(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    credits: Annotated[int, Field(gt=0)]
+    credits: Annotated[int, Field(gt=0, le=9007199254740991)]
     reason: Annotated[str | None, Field(max_length=256)] = None
 
 
@@ -1483,8 +1516,8 @@ class Options18(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0)]
-    currency: str
+    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0, le=9007199254740991)]
+    currency: Annotated[str, Field(max_length=3, min_length=3)]
     kind: Literal["charge"]
     label: str | None = None
     meter: Annotated[str | None, Field(min_length=1)] = None
@@ -1497,8 +1530,13 @@ class Options19(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    anchor: str | None = None
-    count: Annotated[int | None, Field(ge=1)] = None
+    anchor: Annotated[
+        str | None,
+        Field(
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        ),
+    ] = None
+    count: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
     interval: Literal["week", "month", "year"]
     kind: Literal["billingCycle"]
 
@@ -1509,11 +1547,11 @@ class Options20(BaseModel):
         populate_by_name=True,
     )
     charge: Charge
-    from_: Annotated[int, Field(alias="from", ge=0)]
+    from_: Annotated[int, Field(alias="from", ge=0, le=9007199254740991)]
     kind: Literal["tier"]
     label: str | None = None
     mode: Literal["graduated", "volume"]
-    to: Annotated[int | None, Field(ge=0)]
+    to: Annotated[int | None, Field(ge=0, le=9007199254740991)]
 
 
 class Options21(BaseModel):
@@ -1521,13 +1559,13 @@ class Options21(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    cap: Annotated[int, Field(ge=0)]
+    cap: Annotated[int, Field(ge=0, le=9007199254740991)]
     kind: Literal["limit"]
     label: str | None = None
     meter: Annotated[str, Field(min_length=1)]
     on_exceed: Annotated[Literal["block", "draw_credits"], Field(alias="onExceed")]
     scope: Literal["billing_period", "lifetime", "rolling_window"]
-    window_days: Annotated[int | None, Field(alias="windowDays", ge=1)] = None
+    window_days: Annotated[int | None, Field(alias="windowDays", ge=1, le=9007199254740991)] = None
 
 
 class Options22(BaseModel):
@@ -1547,7 +1585,7 @@ class Options23(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    days: Annotated[int, Field(ge=1)]
+    days: Annotated[int, Field(ge=1, le=9007199254740991)]
     kind: Literal["trial"]
     label: str | None = None
     on_end: Annotated[Literal["convert", "cancel"], Field(alias="onEnd")]
@@ -1561,13 +1599,13 @@ class Options24(BaseModel):
     applies_to: Annotated[
         Literal["recurring", "setup", "usage", "all"] | None, Field(alias="appliesTo")
     ] = None
-    currency: str | None = None
-    cycles: Annotated[int | None, Field(ge=1)] = None
+    currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
+    cycles: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
     duration: Literal["once", "repeating", "forever"]
     kind: Literal["discount"]
     label: str | None = None
     mode: Literal["percentage", "fixed"]
-    value: Annotated[int, Field(gt=0)]
+    value: Annotated[int, Field(gt=0, le=9007199254740991)]
 
 
 class Options25(BaseModel):
@@ -1856,8 +1894,14 @@ class PutAutoRechargeSdkDto(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    currency: str
-    customer_email: Annotated[str | None, Field(alias="customerEmail")] = None
+    currency: Annotated[str, Field(max_length=3, min_length=3)]
+    customer_email: Annotated[
+        str | None,
+        Field(
+            alias="customerEmail",
+            pattern="^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+        ),
+    ] = None
     customer_name: Annotated[str | None, Field(alias="customerName")] = None
     customer_ref: Annotated[str, Field(alias="customerRef", min_length=1)]
     defer_setup_intent: Annotated[bool | None, Field(alias="deferSetupIntent")] = None
@@ -2422,7 +2466,12 @@ class UpdateCustomerRequest(BaseModel):
         populate_by_name=True,
     )
     description: Annotated[str | None, Field(max_length=1000)] = None
-    email: str | None = None
+    email: Annotated[
+        str | None,
+        Field(
+            pattern="^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        ),
+    ] = None
     external_ref: Annotated[str | None, Field(alias="externalRef", max_length=50)] = None
     metadata: Any | None = None
     name: Annotated[
@@ -2436,8 +2485,8 @@ class Options27(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0)]
-    currency: str
+    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0, le=9007199254740991)]
+    currency: Annotated[str, Field(max_length=3, min_length=3)]
     kind: Literal["charge"]
     label: str | None = None
     meter: Annotated[str | None, Field(min_length=1)] = None
@@ -2450,8 +2499,13 @@ class Options28(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    anchor: str | None = None
-    count: Annotated[int | None, Field(ge=1)] = None
+    anchor: Annotated[
+        str | None,
+        Field(
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        ),
+    ] = None
+    count: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
     interval: Literal["week", "month", "year"]
     kind: Literal["billingCycle"]
 
@@ -2462,11 +2516,11 @@ class Options29(BaseModel):
         populate_by_name=True,
     )
     charge: Charge
-    from_: Annotated[int, Field(alias="from", ge=0)]
+    from_: Annotated[int, Field(alias="from", ge=0, le=9007199254740991)]
     kind: Literal["tier"]
     label: str | None = None
     mode: Literal["graduated", "volume"]
-    to: Annotated[int | None, Field(ge=0)]
+    to: Annotated[int | None, Field(ge=0, le=9007199254740991)]
 
 
 class Options30(BaseModel):
@@ -2474,13 +2528,13 @@ class Options30(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    cap: Annotated[int, Field(ge=0)]
+    cap: Annotated[int, Field(ge=0, le=9007199254740991)]
     kind: Literal["limit"]
     label: str | None = None
     meter: Annotated[str, Field(min_length=1)]
     on_exceed: Annotated[Literal["block", "draw_credits"], Field(alias="onExceed")]
     scope: Literal["billing_period", "lifetime", "rolling_window"]
-    window_days: Annotated[int | None, Field(alias="windowDays", ge=1)] = None
+    window_days: Annotated[int | None, Field(alias="windowDays", ge=1, le=9007199254740991)] = None
 
 
 class Options31(BaseModel):
@@ -2500,7 +2554,7 @@ class Options32(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    days: Annotated[int, Field(ge=1)]
+    days: Annotated[int, Field(ge=1, le=9007199254740991)]
     kind: Literal["trial"]
     label: str | None = None
     on_end: Annotated[Literal["convert", "cancel"], Field(alias="onEnd")]
@@ -2514,13 +2568,13 @@ class Options33(BaseModel):
     applies_to: Annotated[
         Literal["recurring", "setup", "usage", "all"] | None, Field(alias="appliesTo")
     ] = None
-    currency: str | None = None
-    cycles: Annotated[int | None, Field(ge=1)] = None
+    currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
+    cycles: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
     duration: Literal["once", "repeating", "forever"]
     kind: Literal["discount"]
     label: str | None = None
     mode: Literal["percentage", "fixed"]
-    value: Annotated[int, Field(gt=0)]
+    value: Annotated[int, Field(gt=0, le=9007199254740991)]
 
 
 class Options34(BaseModel):
@@ -2546,11 +2600,15 @@ class UpdatePlanRequest(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    access_expiry_days: Annotated[int | None, Field(alias="accessExpiryDays", ge=0)] = None
+    access_expiry_days: Annotated[
+        int | None, Field(alias="accessExpiryDays", ge=0, le=9007199254740991)
+    ] = None
     currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
     description: Annotated[str | None, Field(max_length=500)] = None
     features: dict[str, Any] | None = None
-    max_active_users: Annotated[int | None, Field(alias="maxActiveUsers", ge=0)] = None
+    max_active_users: Annotated[
+        int | None, Field(alias="maxActiveUsers", ge=0, le=9007199254740991)
+    ] = None
     metadata: dict[str, Any] | None = None
     name: Annotated[
         str | None,
@@ -2626,7 +2684,12 @@ class UntaggedItem(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    at: str
+    at: Annotated[
+        str,
+        Field(
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        ),
+    ]
     cost: Annotated[str, Field(pattern="^\\d+(\\.\\d{1,8})?$")]
 
 
@@ -2635,8 +2698,19 @@ class Window(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    from_: Annotated[str | None, Field(alias="from")] = None
-    to: str | None = None
+    from_: Annotated[
+        str | None,
+        Field(
+            alias="from",
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+        ),
+    ] = None
+    to: Annotated[
+        str | None,
+        Field(
+            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        ),
+    ] = None
 
 
 class UsageReportDto(BaseModel):
@@ -2768,7 +2842,7 @@ class VerifyAgentKeyDto(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    agent_key: Annotated[str, Field(alias="agentKey", max_length=200)]
+    agent_key: Annotated[str, Field(alias="agentKey", max_length=200, pattern="^agk_.*")]
 
 
 class WebhookEventDataDto(BaseModel):

@@ -137,6 +137,7 @@
         "type": "object"
       },
       "AuthorizeCallDto": {
+        "additionalProperties": false,
         "properties": {
           "agentToken": {
             "maxLength": 4096,
@@ -144,6 +145,7 @@
             "type": "string"
           },
           "estimate": {
+            "additionalProperties": false,
             "properties": {
               "amount": {
                 "pattern": "^\\d+(\\.\\d{1,8})?$",
@@ -179,8 +181,6 @@
           },
           "wait": {
             "default": 0,
-            "exclusiveMaximum": false,
-            "exclusiveMinimum": false,
             "maximum": 55,
             "minimum": 0,
             "type": "integer"
@@ -206,6 +206,7 @@
                     "type": "string"
                   },
                   "held": {
+                    "additionalProperties": false,
                     "properties": {
                       "amount": {
                         "pattern": "^\\d+(\\.\\d{1,8})?$",
@@ -301,6 +302,8 @@
                 "type": "string"
               },
               "retryAfterSeconds": {
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
                 "type": "integer"
               },
               "status": {
@@ -639,7 +642,6 @@
                   "type": "string"
                 },
                 "duration": {
-                  "exclusiveMinimum": false,
                   "minimum": 0,
                   "type": "number"
                 },
@@ -673,20 +675,18 @@
                 },
                 "timestamp": {
                   "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                   "type": "string"
                 },
                 "units": {
                   "default": 1,
-                  "exclusiveMaximum": false,
-                  "exclusiveMinimum": false,
                   "maximum": 100000,
                   "minimum": 0,
                   "type": "integer"
                 }
               },
               "required": [
-                "customerRef",
-                "timestamp"
+                "customerRef"
               ],
               "type": "object"
             },
@@ -913,6 +913,7 @@
             "properties": {
               "cap": {
                 "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
                 "minimum": 0,
                 "type": "integer"
               },
@@ -930,7 +931,7 @@
                 "type": "string"
               },
               "windowDays": {
-                "exclusiveMinimum": false,
+                "maximum": 9007199254740991,
                 "minimum": 1,
                 "type": "integer"
               }
@@ -969,8 +970,10 @@
         "type": "object"
       },
       "CompleteCallDto": {
+        "additionalProperties": false,
         "properties": {
           "cost": {
+            "additionalProperties": false,
             "nullable": true,
             "properties": {
               "amount": {
@@ -982,6 +985,10 @@
                 "type": "string"
               }
             },
+            "required": [
+              "amount",
+              "currency"
+            ],
             "type": "object"
           },
           "interrupted": {
@@ -990,8 +997,6 @@
             "type": "string"
           },
           "status": {
-            "exclusiveMaximum": false,
-            "exclusiveMinimum": false,
             "maximum": 599,
             "minimum": 100,
             "type": "integer"
@@ -1006,6 +1011,7 @@
       "CompleteCallResponseDto": {
         "properties": {
           "amount": {
+            "additionalProperties": false,
             "properties": {
               "amount": {
                 "pattern": "^\\d+(\\.\\d{1,8})?$",
@@ -1073,11 +1079,13 @@
                       {
                         "properties": {
                           "amountMinor": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           },
                           "currency": {
+                            "maxLength": 3,
+                            "minLength": 3,
                             "type": "string"
                           },
                           "kind": {
@@ -1117,10 +1125,11 @@
                         "properties": {
                           "anchor": {
                             "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                             "type": "string"
                           },
                           "count": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 1,
                             "type": "integer"
                           },
@@ -1150,11 +1159,13 @@
                           "charge": {
                             "properties": {
                               "amountMinor": {
-                                "exclusiveMinimum": false,
+                                "maximum": 9007199254740991,
                                 "minimum": 0,
                                 "type": "integer"
                               },
                               "currency": {
+                                "maxLength": 3,
+                                "minLength": 3,
                                 "type": "string"
                               },
                               "label": {
@@ -1181,7 +1192,7 @@
                             "type": "object"
                           },
                           "from": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           },
@@ -1202,7 +1213,7 @@
                             "type": "string"
                           },
                           "to": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "nullable": true,
                             "type": "integer"
@@ -1218,9 +1229,10 @@
                         "type": "object"
                       },
                       {
+                        "additionalProperties": false,
                         "properties": {
                           "cap": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           },
@@ -1253,7 +1265,7 @@
                             "type": "string"
                           },
                           "windowDays": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 1,
                             "type": "integer"
                           }
@@ -1309,7 +1321,7 @@
                       {
                         "properties": {
                           "days": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 1,
                             "type": "integer"
                           },
@@ -1349,10 +1361,12 @@
                             "type": "string"
                           },
                           "currency": {
+                            "maxLength": 3,
+                            "minLength": 3,
                             "type": "string"
                           },
                           "cycles": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 1,
                             "type": "integer"
                           },
@@ -1382,6 +1396,7 @@
                           },
                           "value": {
                             "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           }
@@ -1636,6 +1651,7 @@
           },
           "email": {
             "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           },
           "externalRef": {
@@ -1652,7 +1668,7 @@
             "type": "string"
           },
           "telephone": {
-            "oneOf": [
+            "anyOf": [
               {
                 "pattern": "^\\+[1-9]\\d{6,14}$",
                 "type": "string"
@@ -1710,8 +1726,6 @@
       "CreatePaymentIntentDto": {
         "properties": {
           "amount": {
-            "exclusiveMaximum": false,
-            "exclusiveMinimum": false,
             "maximum": 10000000,
             "minimum": 100,
             "type": "integer"
@@ -1719,27 +1733,26 @@
           "autoRecharge": {
             "properties": {
               "currency": {
+                "maxLength": 3,
+                "minLength": 3,
                 "type": "string"
               },
               "enabled": {
                 "type": "boolean"
               },
               "maxMonthlySpendMajor": {
-                "exclusiveMaximum": false,
                 "exclusiveMinimum": true,
                 "maximum": 10000,
                 "minimum": 0,
                 "type": "number"
               },
               "thresholdAmountMajor": {
-                "exclusiveMaximum": false,
                 "exclusiveMinimum": true,
                 "maximum": 10000,
                 "minimum": 0,
                 "type": "number"
               },
               "topupAmountMajor": {
-                "exclusiveMaximum": false,
                 "exclusiveMinimum": true,
                 "maximum": 10000,
                 "minimum": 0,
@@ -1755,6 +1768,8 @@
             "type": "object"
           },
           "currency": {
+            "maxLength": 3,
+            "minLength": 3,
             "type": "string"
           },
           "customerRef": {
@@ -1797,7 +1812,7 @@
       "CreatePlanRequest": {
         "properties": {
           "accessExpiryDays": {
-            "exclusiveMinimum": false,
+            "maximum": 9007199254740991,
             "minimum": 0,
             "type": "integer"
           },
@@ -1816,7 +1831,7 @@
             "type": "object"
           },
           "maxActiveUsers": {
-            "exclusiveMinimum": false,
+            "maximum": 9007199254740991,
             "minimum": 0,
             "type": "integer"
           },
@@ -1836,11 +1851,13 @@
                 {
                   "properties": {
                     "amountMinor": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
                     },
                     "currency": {
+                      "maxLength": 3,
+                      "minLength": 3,
                       "type": "string"
                     },
                     "kind": {
@@ -1880,10 +1897,11 @@
                   "properties": {
                     "anchor": {
                       "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
                     "count": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 1,
                       "type": "integer"
                     },
@@ -1913,11 +1931,13 @@
                     "charge": {
                       "properties": {
                         "amountMinor": {
-                          "exclusiveMinimum": false,
+                          "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
                         },
                         "currency": {
+                          "maxLength": 3,
+                          "minLength": 3,
                           "type": "string"
                         },
                         "label": {
@@ -1944,7 +1964,7 @@
                       "type": "object"
                     },
                     "from": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
                     },
@@ -1965,7 +1985,7 @@
                       "type": "string"
                     },
                     "to": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "nullable": true,
                       "type": "integer"
@@ -1981,9 +2001,10 @@
                   "type": "object"
                 },
                 {
+                  "additionalProperties": false,
                   "properties": {
                     "cap": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
                     },
@@ -2016,7 +2037,7 @@
                       "type": "string"
                     },
                     "windowDays": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 1,
                       "type": "integer"
                     }
@@ -2072,7 +2093,7 @@
                 {
                   "properties": {
                     "days": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 1,
                       "type": "integer"
                     },
@@ -2112,10 +2133,12 @@
                       "type": "string"
                     },
                     "currency": {
+                      "maxLength": 3,
+                      "minLength": 3,
                       "type": "string"
                     },
                     "cycles": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 1,
                       "type": "integer"
                     },
@@ -2145,6 +2168,7 @@
                     },
                     "value": {
                       "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
                     }
@@ -2230,6 +2254,7 @@
               },
               "validityPeriod": {
                 "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
                 "minimum": 0,
                 "type": "integer"
               }
@@ -2323,7 +2348,6 @@
             "type": "string"
           },
           "duration": {
-            "exclusiveMinimum": false,
             "minimum": 0,
             "type": "number"
           },
@@ -2357,20 +2381,18 @@
           },
           "timestamp": {
             "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
             "type": "string"
           },
           "units": {
             "default": 1,
-            "exclusiveMaximum": false,
-            "exclusiveMinimum": false,
             "maximum": 100000,
             "minimum": 0,
             "type": "integer"
           }
         },
         "required": [
-          "customerRef",
-          "timestamp"
+          "customerRef"
         ],
         "type": "object"
       },
@@ -2717,6 +2739,7 @@
         "properties": {
           "credits": {
             "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
             "minimum": 0,
             "type": "integer"
           },
@@ -3065,11 +3088,13 @@
                       {
                         "properties": {
                           "amountMinor": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           },
                           "currency": {
+                            "maxLength": 3,
+                            "minLength": 3,
                             "type": "string"
                           },
                           "kind": {
@@ -3109,10 +3134,11 @@
                         "properties": {
                           "anchor": {
                             "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                             "type": "string"
                           },
                           "count": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 1,
                             "type": "integer"
                           },
@@ -3142,11 +3168,13 @@
                           "charge": {
                             "properties": {
                               "amountMinor": {
-                                "exclusiveMinimum": false,
+                                "maximum": 9007199254740991,
                                 "minimum": 0,
                                 "type": "integer"
                               },
                               "currency": {
+                                "maxLength": 3,
+                                "minLength": 3,
                                 "type": "string"
                               },
                               "label": {
@@ -3173,7 +3201,7 @@
                             "type": "object"
                           },
                           "from": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           },
@@ -3194,7 +3222,7 @@
                             "type": "string"
                           },
                           "to": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "nullable": true,
                             "type": "integer"
@@ -3210,9 +3238,10 @@
                         "type": "object"
                       },
                       {
+                        "additionalProperties": false,
                         "properties": {
                           "cap": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           },
@@ -3245,7 +3274,7 @@
                             "type": "string"
                           },
                           "windowDays": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 1,
                             "type": "integer"
                           }
@@ -3301,7 +3330,7 @@
                       {
                         "properties": {
                           "days": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 1,
                             "type": "integer"
                           },
@@ -3341,10 +3370,12 @@
                             "type": "string"
                           },
                           "currency": {
+                            "maxLength": 3,
+                            "minLength": 3,
                             "type": "string"
                           },
                           "cycles": {
-                            "exclusiveMinimum": false,
+                            "maximum": 9007199254740991,
                             "minimum": 1,
                             "type": "integer"
                           },
@@ -3374,6 +3405,7 @@
                           },
                           "value": {
                             "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           }
@@ -3856,10 +3888,13 @@
       "PutAutoRechargeSdkDto": {
         "properties": {
           "currency": {
+            "maxLength": 3,
+            "minLength": 3,
             "type": "string"
           },
           "customerEmail": {
             "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           },
           "customerName": {
@@ -3876,21 +3911,18 @@
             "type": "boolean"
           },
           "maxMonthlySpendMajor": {
-            "exclusiveMaximum": false,
             "exclusiveMinimum": true,
             "maximum": 10000,
             "minimum": 0,
             "type": "number"
           },
           "thresholdAmountMajor": {
-            "exclusiveMaximum": false,
             "exclusiveMinimum": true,
             "maximum": 10000,
             "minimum": 0,
             "type": "number"
           },
           "topupAmountMajor": {
-            "exclusiveMaximum": false,
             "exclusiveMinimum": true,
             "maximum": 10000,
             "minimum": 0,
@@ -4783,6 +4815,7 @@
           },
           "email": {
             "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           },
           "externalRef": {
@@ -4796,7 +4829,7 @@
             "type": "string"
           },
           "telephone": {
-            "oneOf": [
+            "anyOf": [
               {
                 "pattern": "^\\+[1-9]\\d{6,14}$",
                 "type": "string"
@@ -4815,7 +4848,7 @@
       "UpdatePlanRequest": {
         "properties": {
           "accessExpiryDays": {
-            "exclusiveMinimum": false,
+            "maximum": 9007199254740991,
             "minimum": 0,
             "type": "integer"
           },
@@ -4834,7 +4867,7 @@
             "type": "object"
           },
           "maxActiveUsers": {
-            "exclusiveMinimum": false,
+            "maximum": 9007199254740991,
             "minimum": 0,
             "type": "integer"
           },
@@ -4854,11 +4887,13 @@
                 {
                   "properties": {
                     "amountMinor": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
                     },
                     "currency": {
+                      "maxLength": 3,
+                      "minLength": 3,
                       "type": "string"
                     },
                     "kind": {
@@ -4898,10 +4933,11 @@
                   "properties": {
                     "anchor": {
                       "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
                     "count": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 1,
                       "type": "integer"
                     },
@@ -4931,11 +4967,13 @@
                     "charge": {
                       "properties": {
                         "amountMinor": {
-                          "exclusiveMinimum": false,
+                          "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
                         },
                         "currency": {
+                          "maxLength": 3,
+                          "minLength": 3,
                           "type": "string"
                         },
                         "label": {
@@ -4962,7 +5000,7 @@
                       "type": "object"
                     },
                     "from": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
                     },
@@ -4983,7 +5021,7 @@
                       "type": "string"
                     },
                     "to": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "nullable": true,
                       "type": "integer"
@@ -4999,9 +5037,10 @@
                   "type": "object"
                 },
                 {
+                  "additionalProperties": false,
                   "properties": {
                     "cap": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
                     },
@@ -5034,7 +5073,7 @@
                       "type": "string"
                     },
                     "windowDays": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 1,
                       "type": "integer"
                     }
@@ -5090,7 +5129,7 @@
                 {
                   "properties": {
                     "days": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 1,
                       "type": "integer"
                     },
@@ -5130,10 +5169,12 @@
                       "type": "string"
                     },
                     "currency": {
+                      "maxLength": 3,
+                      "minLength": 3,
                       "type": "string"
                     },
                     "cycles": {
-                      "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
                       "minimum": 1,
                       "type": "integer"
                     },
@@ -5163,6 +5204,7 @@
                     },
                     "value": {
                       "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
                     }
@@ -5244,6 +5286,7 @@
               },
               "validityPeriod": {
                 "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
                 "minimum": 0,
                 "type": "integer"
               }
@@ -5317,9 +5360,11 @@
         "type": "object"
       },
       "UsageReportDto": {
+        "additionalProperties": false,
         "properties": {
           "calls": {
             "items": {
+              "additionalProperties": false,
               "properties": {
                 "callRef": {
                   "maxLength": 20,
@@ -5361,9 +5406,11 @@
           },
           "untagged": {
             "items": {
+              "additionalProperties": false,
               "properties": {
                 "at": {
                   "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                   "type": "string"
                 },
                 "cost": {
@@ -5381,13 +5428,16 @@
             "type": "array"
           },
           "window": {
+            "additionalProperties": false,
             "properties": {
               "from": {
                 "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                 "type": "string"
               },
               "to": {
                 "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
                 "type": "string"
               }
             },
@@ -5732,7 +5782,9 @@
       "VerifyAgentKeyDto": {
         "properties": {
           "agentKey": {
+            "format": "starts_with",
             "maxLength": 200,
+            "pattern": "^agk_.*",
             "type": "string"
           }
         },
@@ -9875,7 +9927,6 @@
             "name": "includeFree",
             "required": false,
             "schema": {
-              "default": true,
               "type": "boolean"
             }
           }
