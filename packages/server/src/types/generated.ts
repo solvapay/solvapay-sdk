@@ -1050,7 +1050,7 @@ export interface components {
         productRef?: string
         purchaseRef?: string
         /** Format: date-time */
-        timestamp: string
+        timestamp?: string
         /** @default 1 */
         units: number
       }[]
@@ -1583,7 +1583,7 @@ export interface components {
       productRef?: string
       purchaseRef?: string
       /** Format: date-time */
-      timestamp: string
+      timestamp?: string
       /** @default 1 */
       units: number
     }

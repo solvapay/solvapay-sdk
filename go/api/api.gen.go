@@ -3530,7 +3530,7 @@ type BulkCreateUsageRequest struct {
 		Outcome        *BulkCreateUsageRequestEventsOutcome `json:"outcome,omitempty"`
 		ProductRef     *string                              `json:"productRef,omitempty"`
 		PurchaseRef    *string                              `json:"purchaseRef,omitempty"`
-		Timestamp      string                               `json:"timestamp"`
+		Timestamp      *string                              `json:"timestamp,omitempty"`
 		Units          *int                                 `json:"units,omitempty"`
 	} `json:"events"`
 }
@@ -3658,8 +3658,8 @@ type CloneProductDto struct {
 // CompleteCallDto defines model for CompleteCallDto.
 type CompleteCallDto struct {
 	Cost *struct {
-		Amount   *string `json:"amount,omitempty"`
-		Currency *string `json:"currency,omitempty"`
+		Amount   string `json:"amount"`
+		Currency string `json:"currency"`
 	} `json:"cost"`
 	Interrupted *string `json:"interrupted,omitempty"`
 	Status      int     `json:"status"`
@@ -4229,7 +4229,7 @@ type CreateUsageRequest struct {
 	Outcome        *CreateUsageRequestOutcome `json:"outcome,omitempty"`
 	ProductRef     *string                    `json:"productRef,omitempty"`
 	PurchaseRef    *string                    `json:"purchaseRef,omitempty"`
-	Timestamp      string                     `json:"timestamp"`
+	Timestamp      *string                    `json:"timestamp,omitempty"`
 	Units          *int                       `json:"units,omitempty"`
 }
 
