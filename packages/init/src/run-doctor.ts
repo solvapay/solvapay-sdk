@@ -382,20 +382,6 @@ export const runDoctorInDirectory = async ({
     checks.push(await checkPythonMcpImports(cwd))
   }
 
-  // The TypeScript factory and paywall read SOLVAPAY_DEBUG differently; the
-  // Python and Go SDKs don't, so the warning is for TypeScript projects only.
-  if (sdkChecks.npmNames && sdkChecks.npmNames.length > 0) {
-    const debugRaw = process.env.SOLVAPAY_DEBUG
-    checks.push({
-      name: 'SOLVAPAY_DEBUG defaults',
-      ok: true,
-      detail:
-        debugRaw === undefined
-          ? 'warning: unset — factory treats debug as ON (!== "false") while client/paywall treat it as OFF (=== "true"). Set explicitly to "true" or "false".'
-          : `set to "${debugRaw}"`,
-    })
-  }
-
   for (const check of checks) {
     printCheck(check)
   }

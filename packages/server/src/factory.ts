@@ -887,9 +887,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       apiBaseUrl: resolvedConfig.apiBaseUrl,
     })
 
-  // Create paywall instance with debug flag controlled by environment variable
+  // Debug logging follows the paywall's own default, like the API client:
+  // on only when SOLVAPAY_DEBUG is "true".
   const paywall = new SolvaPayPaywall(apiClient, {
-    debug: process.env.SOLVAPAY_DEBUG !== 'false',
     limitsCacheTTL: resolvedConfig.limitsCacheTTL,
   })
 

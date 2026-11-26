@@ -676,7 +676,7 @@ export class SolvaPayPaywall {
           const errorMessage = error instanceof Error ? error.message : String(error)
           if (!(error instanceof SolvaPayError && error.status === 404)) {
             // Unexpected error - log but continue to fallback behavior
-            this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`)
+            console.warn(`⚠️  Error looking up customer by externalRef: ${errorMessage}`)
           }
         }
       }
@@ -751,7 +751,7 @@ export class SolvaPayPaywall {
                 return searchResult.customerRef
               }
             } catch (lookupError: unknown) {
-              this.log(
+              console.warn(
                 `⚠️ Failed to lookup existing customer by externalRef after 409:`,
                 lookupError instanceof Error ? lookupError.message : lookupError,
               )
@@ -781,7 +781,7 @@ export class SolvaPayPaywall {
                   try {
                     await this.apiClient.updateCustomer(byEmail.customerRef, { externalRef })
                   } catch (backfillError: unknown) {
-                    this.log(
+                    console.warn(
                       `⚠️ Failed to backfill externalRef on ${byEmail.customerRef}:`,
                       backfillError instanceof Error ? backfillError.message : backfillError,
                     )
@@ -791,7 +791,7 @@ export class SolvaPayPaywall {
                 return byEmail.customerRef
               }
             } catch (emailLookupError: unknown) {
-              this.log(
+              console.warn(
                 `⚠️ Email lookup failed after customer conflict for ${customerRef}:`,
                 emailLookupError instanceof Error ? emailLookupError.message : emailLookupError,
               )
@@ -823,7 +823,7 @@ export class SolvaPayPaywall {
               )
               return retryRef
             } catch (retryError: unknown) {
-              this.log(
+              console.warn(
                 `⚠️ Retry create customer with generated email failed for ${customerRef}:`,
                 retryError instanceof Error ? retryError.message : retryError,
               )
