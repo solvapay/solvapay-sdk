@@ -163,7 +163,7 @@
     "paywall-gate/unlimited-sentinel-omits-included.json": "sha256:a2ed330c02b08f4ce401438545d22e15d54c02cf1a92d53c4a7c62ffa6554f68",
     "paywall-gate/zero-credit-balance-without-cost.json": "sha256:08e6b115a737016c84c2fc6ce93c650addb553bc8afc5a1e37acd840c96f0f25",
     "paywall-sequences/activation-gate-for-new-user.json": "sha256:9954161d69911d404351ee0f8a8220afb7f2e5596a0558a02b9e6e2e46b4a0d6",
-    "paywall-sequences/anonymous-caller.json": "sha256:be85d4fffa0aafa41bb89882c15be247ad5efd5338b74951d4fa58cade1e8a6a",
+    "paywall-sequences/anonymous-caller.json": "sha256:330f134b67aaf12639ac85131de49dd8e1136b99d49b6b2b38883af23cd1f8bf",
     "paywall-sequences/cache-counts-down-then-rechecks.json": "sha256:f2604bf0a348f644029f5fb167c578d19ad683d669ecf26b9fc3c0d6c1d5756a",
     "paywall-sequences/cache-expires-at-ttl.json": "sha256:4e45d36d7eecc96d5561fad95604d1b356f8e973501b72d63992a49d19037a48",
     "paywall-sequences/customer-conflict-resolved-by-lookup.json": "sha256:8863c4956a317a7124e4d646efa21ae226094965d9575eb9f84ba8ec82b56bc3",

@@ -258,7 +258,9 @@ class Paywall:
         request_id = _request_id()
         started = time.monotonic()
 
-        if free_limit and (not customer_ref.strip() or customer_ref.strip() == "anonymous"):
+        # Every check needs a customer the API knows. A caller with none is
+        # refused here, before any API call: there is no anonymous customer.
+        if not customer_ref.strip() or customer_ref.strip() == "anonymous":
             raise SolvaPayError("identity required", code="identity_required", status=401)
 
         backend_ref = await self.ensure_customer(customer_ref, customer_ref)
