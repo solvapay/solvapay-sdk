@@ -71,24 +71,43 @@ const printBanner = (): void => {
 const PYTHON_DOCS = 'https://docs.solvapay.com/sdks/python/setup/quick-start'
 const GO_DOCS = 'https://docs.solvapay.com/sdks/go/setup/quick-start'
 const GO_MCP_GUIDE = 'https://docs.solvapay.com/sdks/go/guides/mcp'
+const TS_DOCS = 'https://docs.solvapay.com/sdks/typescript/setup/quick-start'
+const TS_MCP_GUIDE = 'https://docs.solvapay.com/sdks/typescript/guides/mcp'
 
 type SetupSummary = {
   printed: SdkCommand[]
   features: SdkFeature[]
   /** `npx -y solvapay@<tag>`: `preview` from a preview CLI, else `latest`. */
   cliTag: 'latest' | 'preview'
+  /** A scaffolder ran init and prints its own next steps afterwards. */
+  scaffolded: boolean
 }
 
 const printSetupComplete = (
   project: DetectedProject,
-  { printed, features, cliTag }: SetupSummary,
+  { printed, features, cliTag, scaffolded }: SetupSummary,
 ): void => {
   if (project.language === 'ts') {
-    process.stdout.write(`
-You're all set. SolvaPay credentials were saved to .env.
-
-Continue with the next step in your setup when you're ready.
-`)
+    const lines = ["You're all set. SolvaPay credentials were saved to .env."]
+    if (!scaffolded) {
+      const cli = `npx -y solvapay@${cliTag}`
+      lines.push(
+        '',
+        'The SDK reads environment variables. If your framework does not load .env',
+        'itself (Next.js and wrangler do), load it at startup: `node --env-file=.env`',
+        'or `import "dotenv/config"`.',
+        '',
+        'Next steps:',
+        ...(features.includes('mcp')
+          ? [
+              `   Add the paywall to your MCP server: ${TS_MCP_GUIDE}`,
+              `   Check a running MCP server: ${cli} verify <server url>/mcp`,
+            ]
+          : [`   Protect an endpoint: ${TS_DOCS}`]),
+        `   Check this project:         ${cli} doctor`,
+      )
+    }
+    process.stdout.write(`\n${lines.join('\n')}\n`)
     return
   }
   const lines = ['', 'SolvaPay credentials were saved to .env.', '']
@@ -607,5 +626,6 @@ export const runInitInDirectory = async ({
     printed,
     features,
     cliTag: options.preview ? 'preview' : 'latest',
+    scaffolded: skipSdkInstall,
   })
 }
