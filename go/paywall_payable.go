@@ -5,7 +5,8 @@ import "context"
 // PaidCall is one call of a function made paid with Payable: who calls it,
 // and its arguments.
 type PaidCall[A any] struct {
-	// CustomerRef is a SolvaPay customer (cus_…), your own user id, or "anonymous".
+	// CustomerRef is a SolvaPay customer (cus_…) or your own user id. Empty or
+	// "anonymous" is refused with identity_required (401).
 	CustomerRef string
 	Args        A
 }

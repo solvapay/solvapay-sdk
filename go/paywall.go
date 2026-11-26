@@ -170,8 +170,9 @@ func (f FreeLimit) wire() map[string]any {
 
 // DecideParams is one paid call to decide.
 type DecideParams struct {
-	// CustomerRef is a SolvaPay customer (cus_…), your own user id (mapped to
-	// a customer, created on first use), or "anonymous".
+	// CustomerRef is a SolvaPay customer (cus_…) or your own user id (mapped to
+	// a customer, created on first use). Empty or "anonymous" is refused with
+	// identity_required (401) before SolvaPay is called.
 	CustomerRef string
 	// Product; empty means the Paywall's ProductRef.
 	Product   string
@@ -507,7 +508,9 @@ func (p *Paywall) Decide(ctx context.Context, params DecideParams) (Decision, er
 	requestID := p.requestID()
 	started := p.now()
 
-	if trimmed := strings.TrimSpace(params.CustomerRef); freeLimit != nil && (trimmed == "" || trimmed == "anonymous") {
+	// Every check needs a customer the API knows. A caller with none is refused
+	// here, before any API call: there is no anonymous customer.
+	if trimmed := strings.TrimSpace(params.CustomerRef); trimmed == "" || trimmed == "anonymous" {
 		return Decision{}, &Error{Code: "identity_required", Status: 401, Message: "identity required"}
 	}
 
