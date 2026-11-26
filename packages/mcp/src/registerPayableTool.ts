@@ -9,6 +9,8 @@ import type { CallToolResult } from '@modelcontextprotocol/server'
 import { z, type ZodTypeAny } from 'zod'
 import {
   buildPayableHandler,
+  defaultGetCustomerRef,
+  toolErrorResult,
   type BuildBootstrapPayloadFn,
   type McpToolExtra,
   type PayableHandler,
@@ -141,10 +143,24 @@ export function registerPayableTool<
     ...(icons !== undefined && icons.length > 0 ? { icons } : {}),
   }
 
+  // Same refusal as `registerFree`: a call with no signed-in customer never
+  // reaches SolvaPay (the API has no `anonymous` customer).
   const toolCallback = async (
     args: Record<string, unknown>,
     extra?: McpToolExtra,
-  ): Promise<CallToolResult> => (await protectedHandler(args, extra)) as CallToolResult
+  ): Promise<CallToolResult> => {
+    const resolved = getCustomerRef
+      ? await getCustomerRef(args, extra)
+      : defaultGetCustomerRef(extra)
+    if (!resolved?.trim() || resolved.trim() === 'anonymous') {
+      return toolErrorResult({
+        error: 'Unauthorized',
+        status: 401,
+        details: 'customer_ref missing from MCP auth context',
+      }) as CallToolResult
+    }
+    return (await protectedHandler(args, extra)) as CallToolResult
+  }
 
   if (hasUiResource) {
     return registerAppTool(server, name, toolConfig, toolCallback)

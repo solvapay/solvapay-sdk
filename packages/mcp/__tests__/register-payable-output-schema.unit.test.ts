@@ -119,6 +119,11 @@ async function invokeToolsCall(
   )
 }
 
+const SIGNED_IN = (() => {
+  const auth = { extra: { customer_ref: 'cus_42' } }
+  return { authInfo: auth, http: { authInfo: auth } }
+})()
+
 function outputValidationMessage(result: ToolCallResult): string | undefined {
   const block = result.content?.find(c => c.type === 'text')
   return block?.text?.includes('Output validation error') ? block.text : undefined
@@ -131,10 +136,12 @@ describe('registerPayable — outputSchema + tools/call', () => {
 
   it('returns flat merchant structuredContent that passes outputSchema validation', async () => {
     const server = buildServer(makeSolvaPay())
-    const result = await invokeToolsCall(server, 'predict_direction', {
-      symbol: 'AAPL',
-      days: 10,
-    })
+    const result = await invokeToolsCall(
+      server,
+      'predict_direction',
+      { symbol: 'AAPL', days: 10 },
+      SIGNED_IN,
+    )
 
     expect(result.isError).toBeFalsy()
     expect(outputValidationMessage(result)).toBeUndefined()
@@ -151,10 +158,12 @@ describe('registerPayable — outputSchema + tools/call', () => {
 
   it('does not fail output validation when checkLimits blocks the call', async () => {
     const server = buildServer(makeSolvaPay({ withinLimits: false }))
-    const result = await invokeToolsCall(server, 'predict_direction', {
-      symbol: 'AAPL',
-      days: 10,
-    })
+    const result = await invokeToolsCall(
+      server,
+      'predict_direction',
+      { symbol: 'AAPL', days: 10 },
+      SIGNED_IN,
+    )
 
     expect(result.isError).toBeFalsy()
     expect(outputValidationMessage(result)).toBeUndefined()
@@ -207,6 +216,19 @@ function makeAccountSolvaPay(overrides: { checkLimits?: Record<string, unknown> 
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }
+
+describe('registerPayable — a call with no signed-in customer', () => {
+  it('is refused before SolvaPay is called', async () => {
+    const solvaPay = makeSolvaPay()
+    const checkLimits = vi.spyOn(solvaPay.apiClient, 'checkLimits')
+    const server = buildServer(solvaPay)
+    const result = await invokeToolsCall(server, 'predict_direction', { symbol: 'AAPL', days: 10 })
+
+    expect(result.isError).toBe(true)
+    expect(result.content?.[0]?.text).toContain('customer_ref missing from MCP auth context')
+    expect(checkLimits).not.toHaveBeenCalled()
+  })
+})
 
 describe('account — outputSchema + tools/call', () => {
   beforeEach(() => {

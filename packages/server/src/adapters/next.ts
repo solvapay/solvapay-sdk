@@ -70,8 +70,9 @@ export class NextAdapter implements Adapter<NextContext, Response> {
   /**
    * `getCustomerRef` when given; otherwise a verified bearer token, the
    * `x-user-id` your middleware sets after verifying the session (a user),
-   * `x-customer-ref` behind a trusted gateway, or anonymous. There is no
-   * default customer. See `identifyRequest`.
+   * `x-customer-ref` behind a trusted gateway, or no customer, which the
+   * paywall refuses with 401. There is no default customer. See
+   * `identifyRequest`.
    */
   async getIdentity([request]: NextContext): Promise<RequestIdentity> {
     if (this.options.getCustomerRef) {

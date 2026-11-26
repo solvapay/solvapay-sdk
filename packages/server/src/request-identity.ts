@@ -9,7 +9,8 @@
  * 2. `x-customer-ref` names a customer only behind a trusted gateway
  *    (`SOLVAPAY_AUTH_TRUST_GATEWAY=true`), because a browser or API client can
  *    set it to anyone. Sent without that opt-in, it is refused (401).
- * 3. With neither, the request is anonymous: no customer.
+ * 3. With neither, the request is anonymous: no customer. The paywall refuses
+ *    it with 401 (`identity_required`) before calling SolvaPay.
  */
 import { SolvaPayError } from '@solvapay/core'
 import { verifyBearerToken } from '@solvapay/auth'
@@ -39,9 +40,16 @@ export function unauthorized(message: string): SolvaPayError {
   return new SolvaPayError(message, { status: 401, code: 'unauthorized' })
 }
 
-/** True for the 401 `identifyRequest` throws, so adapters answer 401 rather than 500. */
+/**
+ * True for the 401s callers can cause: `identifyRequest`'s `unauthorized`, and
+ * the paywall's `identity_required` for a request with no customer. Adapters
+ * answer these with 401 rather than 500.
+ */
 export function isUnauthorized(error: unknown): boolean {
-  return error instanceof SolvaPayError && error.code === 'unauthorized'
+  return (
+    error instanceof SolvaPayError &&
+    (error.code === 'unauthorized' || error.code === 'identity_required')
+  )
 }
 
 export async function identifyRequest(

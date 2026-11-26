@@ -425,19 +425,31 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       const payable = solvaPay.payable({ product: 'next-params' })
       const nextHandler = payable.next(handler)
 
-      const mockRequest = new Request('http://localhost:3000/api/items/123')
+      const mockRequest = new Request('http://localhost:3000/api/items/123', {
+        headers: { 'x-customer-ref': 'params_user' },
+      })
       const context = { params: Promise.resolve({ id: '123' }) }
 
       const response = await nextHandler(mockRequest, context)
 
       expect(response.status).toBe(200)
       expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: '123',
-          auth: { customer_ref: 'anonymous' },
-        }),
+        expect.objectContaining({ id: '123' }),
         expect.anything(),
       )
+    })
+
+    it('answers 401 to a request with no customer, without calling SolvaPay', async () => {
+      const checkLimits = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn()
+      const nextHandler = solvaPay.payable({ product: 'next-anon' }).next(handler)
+
+      const response = await nextHandler(new Request('http://localhost:3000/api/test'))
+
+      expect(response.status).toBe(401)
+      expect(await response.json()).toMatchObject({ success: false, error: 'identity required' })
+      expect(handler).not.toHaveBeenCalled()
+      expect(checkLimits).not.toHaveBeenCalled()
     })
 
     it('should return 402 Response when paywall blocks Next.js request', async () => {

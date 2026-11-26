@@ -2,7 +2,7 @@
   "$schema": "../../case.schema.json",
   "suite": "paywall-sequences",
   "case": "anonymous-caller",
-  "description": "An anonymous caller is never looked up or created: limits are checked for 'anonymous', and both the gate's paywall event and a later call's success event (on the API's meter name) are recorded for 'anonymous'.",
+  "description": "A caller with no customer is refused with identity_required before any API call, on a paid check as on a free allowance: there is no shared 'anonymous' customer. An empty customer ref is refused the same way, and so is a paid call, whose handler never runs.",
   "setup": {
     "productRef": "prd_pw_seq"
   },
@@ -13,72 +13,26 @@
       "args": {
         "customerRef": "anonymous"
       },
-      "api": [
-        {
-          "method": "POST",
-          "path": "/v1/sdk/limits",
-          "body": {
-            "withinLimits": false,
-            "remaining": 0,
-            "checkoutUrl": "https://checkout.conformance.test/s/anon"
-          }
-        },
-        {
-          "method": "POST",
-          "path": "/v1/sdk/usages",
-          "body": {
-            "reference": "usage_pw_2",
-            "success": true
-          }
-        }
-      ],
+      "api": [],
       "expect": {
-        "result": {
-          "outcome": "gate",
-          "customerRef": "anonymous",
-          "gate": {
-            "kind": "payment_required",
-            "product": "prd_pw_seq",
-            "checkoutUrl": "https://checkout.conformance.test/s/anon",
-            "message": "You don't have an active plan for this tool. [Open checkout](https://checkout.conformance.test/s/anon) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
-            "reason": "upgrade_required",
-            "nextAction": "checkout",
-            "remainingCalls": 0,
-            "links": {
-              "checkout": "https://checkout.conformance.test/s/anon"
-            }
-          }
+        "error": {
+          "code": "identity_required"
         },
-        "apiCalls": [
-          {
-            "method": "POST",
-            "path": "/v1/sdk/limits",
-            "body": {
-              "customerRef": "anonymous",
-              "productRef": "prd_pw_seq",
-              "meterName": "requests",
-              "includeCheckoutSession": true
-            }
-          },
-          {
-            "method": "POST",
-            "path": "/v1/sdk/usages",
-            "body": {
-              "customerRef": "anonymous",
-              "actionType": "api_call",
-              "units": 1,
-              "outcome": "paywall",
-              "productRef": "prd_pw_seq",
-              "duration": 0,
-              "idempotencyKey": "solvapay_1794561000000_<random>:paywall",
-              "metadata": {
-                "action": "requests",
-                "requestId": "solvapay_1794561000000_<random>"
-              },
-              "timestamp": "2026-11-13T09:10:00.000Z"
-            }
-          }
-        ]
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:10:00.500Z",
+      "args": {
+        "customerRef": ""
+      },
+      "api": [],
+      "expect": {
+        "error": {
+          "code": "identity_required"
+        },
+        "apiCalls": []
       }
     },
     {
@@ -89,61 +43,12 @@
         "handler": "succeed",
         "toolName": "preview"
       },
-      "api": [
-        {
-          "method": "POST",
-          "path": "/v1/sdk/limits",
-          "body": {
-            "withinLimits": true,
-            "remaining": 2,
-            "meterName": "previews"
-          }
-        },
-        {
-          "method": "POST",
-          "path": "/v1/sdk/usages",
-          "body": {
-            "reference": "usage_pw_3",
-            "success": true
-          }
-        }
-      ],
+      "api": [],
       "expect": {
-        "result": {
-          "ok": true
+        "error": {
+          "code": "identity_required"
         },
-        "apiCalls": [
-          {
-            "method": "POST",
-            "path": "/v1/sdk/limits",
-            "body": {
-              "customerRef": "anonymous",
-              "productRef": "prd_pw_seq",
-              "meterName": "requests",
-              "includeCheckoutSession": true
-            }
-          },
-          {
-            "method": "POST",
-            "path": "/v1/sdk/usages",
-            "body": {
-              "customerRef": "anonymous",
-              "actionType": "api_call",
-              "units": 1,
-              "outcome": "success",
-              "productRef": "prd_pw_seq",
-              "duration": 0,
-              "idempotencyKey": "solvapay_1794561001000_<random>:success",
-              "metadata": {
-                "action": "previews",
-                "requestId": "solvapay_1794561001000_<random>",
-                "toolName": "preview",
-                "usageClass": "included"
-              },
-              "timestamp": "2026-11-13T09:10:01.000Z"
-            }
-          }
-        ]
+        "apiCalls": []
       }
     }
   ]
