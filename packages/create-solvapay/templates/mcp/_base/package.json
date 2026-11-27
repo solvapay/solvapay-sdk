@@ -19,7 +19,7 @@
     "@solvapay/mcp": "0.5.2",
     "@solvapay/mcp-core": "0.6.1",
     "@solvapay/react": "2.7.2",
-    "@solvapay/server": "2.12.1",
+    "@solvapay/server": "2.13.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "zod": "^4.3.6"
