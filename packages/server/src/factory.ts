@@ -16,8 +16,6 @@ import type {
   McpToolExtra,
   CustomerResponseMapped,
   LimitResponseWithPlan,
-  McpBootstrapRequest,
-  McpBootstrapResponse,
   ConfigureMcpPlansRequest,
   ConfigureMcpPlansResponse,
   TrackUsageRequest,
@@ -724,14 +722,6 @@ export interface SolvaPay {
   }): Promise<import('./types/client').ActivatePlanResult>
 
   /**
-   * Bootstrap an MCP-enabled product with plans and tool mappings.
-   *
-   * This helper wraps the backend orchestration endpoint and is intended for
-   * fast setup flows where you want one call for product + plans + MCP config.
-   */
-  bootstrapMcpProduct(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
-
-  /**
    * Configure MCP plans and tool mappings for an existing MCP product.
    *
    * This helper wraps the backend MCP plans endpoint and supports adding/removing
@@ -1013,13 +1003,6 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('activatePlan is not available on this API client')
       }
       return apiClient.activatePlan(params)
-    },
-
-    bootstrapMcpProduct(params) {
-      if (!apiClient.bootstrapMcpProduct) {
-        throw new SolvaPayError('bootstrapMcpProduct is not available on this API client')
-      }
-      return apiClient.bootstrapMcpProduct(params)
     },
 
     configureMcpPlans(productRef, params) {

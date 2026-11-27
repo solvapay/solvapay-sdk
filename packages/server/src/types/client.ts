@@ -230,21 +230,9 @@ export type AssignCreditsRequest = components['schemas']['GrantCustomerCreditsRe
 
 export type AssignCreditsResponse = components['schemas']['GrantCustomerCreditsResponse']
 
-export type McpBootstrapPlanInput = NonNullable<
-  components['schemas']['McpBootstrapDto']['plans']
->[number]
-
-export type ToolPlanMappingInput = NonNullable<
-  components['schemas']['McpBootstrapDto']['tools']
->[number]
-
-export type McpBootstrapRequest = components['schemas']['McpBootstrapDto']
-
 export type McpToolPlanMappingInput = NonNullable<
   components['schemas']['ConfigureMcpPlansDto']['toolMapping']
 >[number]
-
-export type McpBootstrapResponse = components['schemas']['McpBootstrapResult']
 
 export type ConfigureMcpPlansRequest = components['schemas']['ConfigureMcpPlansDto']
 
@@ -341,9 +329,6 @@ export interface SolvaPayClient {
   createProduct?(
     params: components['schemas']['CreateProductRequest'],
   ): Promise<components['schemas']['SdkProductResponse']>
-
-  // POST: /v1/sdk/products/mcp/bootstrap
-  bootstrapMcpProduct?(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
 
   // PUT: /v1/sdk/products/{productRef}/mcp/plans
   configureMcpPlans?(
