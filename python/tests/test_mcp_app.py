@@ -304,7 +304,7 @@ async def test_create_payment_intent_sends_an_idempotency_key() -> None:
     route = respx.post(f"{API}/v1/sdk/payment-intents").respond(
         200,
         json={
-            "processorPaymentId": "pi_1",
+            "intentId": "pi_1",
             "clientSecret": "s",
             "publishableKey": "pk",
             "amount": 1000,

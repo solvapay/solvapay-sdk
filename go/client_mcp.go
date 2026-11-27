@@ -92,14 +92,14 @@ func (c *Client) CreatePaymentIntent(ctx context.Context, body map[string]any, i
 }
 
 // ProcessPaymentIntent creates the purchase for a confirmed payment intent.
-func (c *Client) ProcessPaymentIntent(ctx context.Context, processorPaymentID string, body map[string]any) (map[string]any, error) {
-	return c.withSegment(ctx, http.MethodPost, "/v1/sdk/payment-intents/", processorPaymentID, "/process", body)
+func (c *Client) ProcessPaymentIntent(ctx context.Context, intentID string, body map[string]any) (map[string]any, error) {
+	return c.withSegment(ctx, http.MethodPost, "/v1/sdk/payment-intents/", intentID, "/process", body)
 }
 
 // AttachBusinessDetails attaches a buyer's business details to a payment
 // intent and answers the tax breakdown.
-func (c *Client) AttachBusinessDetails(ctx context.Context, processorPaymentID string, body any) (map[string]any, error) {
-	return c.withSegment(ctx, http.MethodPost, "/v1/sdk/payment-intents/", processorPaymentID, "/business-details", body)
+func (c *Client) AttachBusinessDetails(ctx context.Context, intentID string, body any) (map[string]any, error) {
+	return c.withSegment(ctx, http.MethodPost, "/v1/sdk/payment-intents/", intentID, "/business-details", body)
 }
 
 // CancelPurchase cancels a purchase's renewal (POST /v1/sdk/purchases/{ref}/cancel).

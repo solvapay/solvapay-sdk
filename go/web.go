@@ -714,7 +714,7 @@ func (h *webHandler) disableAutoRecharge(call *webRequest) (any, *webFailure) {
 // ---- payments -----------------------------------------------------------------
 
 func intentAnswer(intent map[string]any, customerRef string) map[string]any {
-	out := present(map[string]any{}, intent, "processorPaymentId", "clientSecret", "publishableKey", "accountId")
+	out := present(map[string]any{}, intent, "intentId", "clientSecret", "publishableKey", "accountId")
 	out["customerRef"] = customerRef
 	return out
 }

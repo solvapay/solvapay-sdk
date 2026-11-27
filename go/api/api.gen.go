@@ -5297,11 +5297,6 @@ type SdkMerchantResponseDto struct {
 	// Example: Greater London
 	StateOrCounty *string `json:"stateOrCounty,omitempty"`
 
-	// StatementDescriptor Descriptor appearing on the customer card statement
-	//
-	// Example: ACME INC
-	StatementDescriptor *string `json:"statementDescriptor,omitempty"`
-
 	// SupportEmail Example: support@acme.com
 	SupportEmail *string `json:"supportEmail,omitempty"`
 
@@ -5354,15 +5349,15 @@ type SdkPaymentIntentListItem struct {
 	// Example: usd
 	Currency string `json:"currency"`
 
+	// IntentId The payment intent id on the protocol
+	//
+	// Example: pi_1a2b3c4d5e6f7g8h
+	IntentId string `json:"intentId"`
+
 	// PlanRef Plan reference
 	//
 	// Example: pln_2b3c4d5e6f7g
 	PlanRef *string `json:"planRef,omitempty"`
-
-	// ProcessorPaymentId Payment processor payment intent ID
-	//
-	// Example: pi_1a2b3c4d5e6f7g8h
-	ProcessorPaymentId string `json:"processorPaymentId"`
 
 	// Status Payment intent status
 	//
@@ -5427,6 +5422,11 @@ type SdkPaymentIntentResponse struct {
 	// Example: 2025-10-19T10:30:00.000Z
 	ExpiresAt *string `json:"expiresAt,omitempty"`
 
+	// IntentId The payment intent id on the protocol
+	//
+	// Example: pi_1a2b3c4d5e6f7g8h
+	IntentId string `json:"intentId"`
+
 	// OriginalAmount Charge-currency amount in minor units (the currency the customer is billed in)
 	//
 	// Example: 4999
@@ -5436,11 +5436,6 @@ type SdkPaymentIntentResponse struct {
 	//
 	// Example: pln_2b3c4d5e6f7g
 	PlanRef *string `json:"planRef,omitempty"`
-
-	// ProcessorPaymentId Payment processor payment intent ID
-	//
-	// Example: pi_1a2b3c4d5e6f7g8h
-	ProcessorPaymentId string `json:"processorPaymentId"`
 
 	// PublishableKey Stripe publishable key for the environment
 	//

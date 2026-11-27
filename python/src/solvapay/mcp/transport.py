@@ -236,7 +236,7 @@ def register_transport_tools(
 
     def intent_result(intent: Any, customer_ref: str) -> CallToolResult:
         data: Json = {
-            "processorPaymentId": intent.processor_payment_id,
+            "intentId": intent.intent_id,
             "clientSecret": intent.client_secret,
             "publishableKey": intent.publishable_key,
         }
@@ -358,9 +358,7 @@ def register_transport_tools(
         if plan_ref:
             body["planRef"] = plan_ref
         try:
-            result = await api.process_payment_intent(
-                processor_payment_id=payment_intent_id, body=body
-            )
+            result = await api.process_payment_intent(intent_id=payment_intent_id, body=body)
         except SolvaPayError as error:
             return _error_from(error)
         return tool_result(_dump(result))
@@ -399,7 +397,7 @@ def register_transport_tools(
             return tool_error_result(error.message, 400)
         try:
             result = await api.attach_business_details(
-                processor_payment_id=payment_intent_id,
+                intent_id=payment_intent_id,
                 body={**details, "customerRef": customer_ref},
             )
         except SolvaPayError as error:

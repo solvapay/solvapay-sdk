@@ -432,15 +432,15 @@ class AsyncSolvaPayApi:
     async def attach_business_details(
         self,
         *,
-        processor_payment_id: str,
+        intent_id: str,
         body: models.BusinessDetailsDto | dict[str, Any],
     ) -> models.AttachBusinessDetailsResponse:
         """Attach business tax details to a payment intent
 
-        POST /v1/sdk/payment-intents/{processorPaymentId}/business-details"""
+        POST /v1/sdk/payment-intents/{intentId}/business-details"""
         data = await self._transport.request(
             "POST",
-            f"/v1/sdk/payment-intents/{path_segment(processor_payment_id)}/business-details",
+            f"/v1/sdk/payment-intents/{path_segment(intent_id)}/business-details",
             query={},
             headers={},
             body=encode_body(body),
@@ -450,15 +450,15 @@ class AsyncSolvaPayApi:
     async def process_payment_intent(
         self,
         *,
-        processor_payment_id: str,
+        intent_id: str,
         body: models.ProcessPaymentIntentDto | dict[str, Any],
     ) -> models.ProcessPaymentIntentResponse:
         """Process payment intent after client-side confirmation
 
-        POST /v1/sdk/payment-intents/{processorPaymentId}/process"""
+        POST /v1/sdk/payment-intents/{intentId}/process"""
         data = await self._transport.request(
             "POST",
-            f"/v1/sdk/payment-intents/{path_segment(processor_payment_id)}/process",
+            f"/v1/sdk/payment-intents/{path_segment(intent_id)}/process",
             query={},
             headers={},
             body=encode_body(body),
@@ -1375,15 +1375,15 @@ class SolvaPayApi:
     def attach_business_details(
         self,
         *,
-        processor_payment_id: str,
+        intent_id: str,
         body: models.BusinessDetailsDto | dict[str, Any],
     ) -> models.AttachBusinessDetailsResponse:
         """Attach business tax details to a payment intent
 
-        POST /v1/sdk/payment-intents/{processorPaymentId}/business-details"""
+        POST /v1/sdk/payment-intents/{intentId}/business-details"""
         data = self._transport.request(
             "POST",
-            f"/v1/sdk/payment-intents/{path_segment(processor_payment_id)}/business-details",
+            f"/v1/sdk/payment-intents/{path_segment(intent_id)}/business-details",
             query={},
             headers={},
             body=encode_body(body),
@@ -1393,15 +1393,15 @@ class SolvaPayApi:
     def process_payment_intent(
         self,
         *,
-        processor_payment_id: str,
+        intent_id: str,
         body: models.ProcessPaymentIntentDto | dict[str, Any],
     ) -> models.ProcessPaymentIntentResponse:
         """Process payment intent after client-side confirmation
 
-        POST /v1/sdk/payment-intents/{processorPaymentId}/process"""
+        POST /v1/sdk/payment-intents/{intentId}/process"""
         data = self._transport.request(
             "POST",
-            f"/v1/sdk/payment-intents/{path_segment(processor_payment_id)}/process",
+            f"/v1/sdk/payment-intents/{path_segment(intent_id)}/process",
             query={},
             headers={},
             body=encode_body(body),

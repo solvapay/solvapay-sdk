@@ -120,10 +120,10 @@ func (s *MCPServer) registerTransportTools() error {
 	positiveMajor := map[string]any{"type": "number", "exclusiveMinimum": 0}
 	intentResult := func(intent map[string]any, customerRef string) (*mcp.CallToolResult, error) {
 		data := map[string]any{
-			"processorPaymentId": jsCoalesce(jsGet(intent, "processorPaymentId"), nil),
-			"clientSecret":       jsCoalesce(jsGet(intent, "clientSecret"), nil),
-			"publishableKey":     jsCoalesce(jsGet(intent, "publishableKey"), nil),
-			"customerRef":        customerRef,
+			"intentId":       jsCoalesce(jsGet(intent, "intentId"), nil),
+			"clientSecret":   jsCoalesce(jsGet(intent, "clientSecret"), nil),
+			"publishableKey": jsCoalesce(jsGet(intent, "publishableKey"), nil),
+			"customerRef":    customerRef,
 		}
 		if account := jsGet(intent, "accountId"); !jsNullish(account) {
 			data["accountId"] = account

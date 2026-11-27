@@ -2004,12 +2004,6 @@ class SdkMerchantResponseDto(BaseModel):
     """
     State, county, or region from the legal entity address. Free text — values like "Greater London" are valid.
     """
-    statement_descriptor: Annotated[
-        str | None, Field(alias="statementDescriptor", examples=["ACME INC"])
-    ] = None
-    """
-    Descriptor appearing on the customer card statement
-    """
     support_email: Annotated[
         str | None, Field(alias="supportEmail", examples=["support@acme.com"])
     ] = None
@@ -2066,15 +2060,13 @@ class SdkPaymentIntentListItem(BaseModel):
     """
     ISO 4217 presentment (charge) currency code
     """
+    intent_id: Annotated[str, Field(alias="intentId", examples=["pi_1a2b3c4d5e6f7g8h"])]
+    """
+    The payment intent id on the protocol
+    """
     plan_ref: Annotated[str | None, Field(alias="planRef", examples=["pln_2b3c4d5e6f7g"])] = None
     """
     Plan reference
-    """
-    processor_payment_id: Annotated[
-        str, Field(alias="processorPaymentId", examples=["pi_1a2b3c4d5e6f7g8h"])
-    ]
-    """
-    Payment processor payment intent ID
     """
     status: Annotated[
         Literal[
@@ -2151,6 +2143,10 @@ class SdkPaymentIntentResponse(BaseModel):
     """
     Expiry timestamp of the payment intent
     """
+    intent_id: Annotated[str, Field(alias="intentId", examples=["pi_1a2b3c4d5e6f7g8h"])]
+    """
+    The payment intent id on the protocol
+    """
     original_amount: Annotated[int | float | None, Field(alias="originalAmount", examples=[4999])] = None
     """
     Charge-currency amount in minor units (the currency the customer is billed in)
@@ -2158,12 +2154,6 @@ class SdkPaymentIntentResponse(BaseModel):
     plan_ref: Annotated[str | None, Field(alias="planRef", examples=["pln_2b3c4d5e6f7g"])] = None
     """
     Plan reference
-    """
-    processor_payment_id: Annotated[
-        str, Field(alias="processorPaymentId", examples=["pi_1a2b3c4d5e6f7g8h"])
-    ]
-    """
-    Payment processor payment intent ID
     """
     publishable_key: Annotated[str, Field(alias="publishableKey", examples=["pk_test_..."])]
     """

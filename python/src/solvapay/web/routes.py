@@ -365,7 +365,7 @@ def _intent_answer(intent: Any, customer_ref: str) -> Json:
     if not isinstance(intent, dict):
         raise _invalid("a payment intent", intent)
     return {
-        **_present(intent, "processorPaymentId", "clientSecret", "publishableKey", "accountId"),
+        **_present(intent, "intentId", "clientSecret", "publishableKey", "accountId"),
         "customerRef": customer_ref,
     }
 
