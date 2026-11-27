@@ -5359,6 +5359,12 @@ type SdkPaymentIntentListItem struct {
 	// Example: pln_2b3c4d5e6f7g
 	PlanRef *string `json:"planRef,omitempty"`
 
+	// ProcessorPaymentId The same id as intentId, under its former name, for SDK versions released before intentId. Read intentId.
+	//
+	// Example: pi_1a2b3c4d5e6f7g8h
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	ProcessorPaymentId *string `json:"processorPaymentId,omitempty"`
+
 	// Status Payment intent status
 	//
 	// Example: succeeded
@@ -5436,6 +5442,12 @@ type SdkPaymentIntentResponse struct {
 	//
 	// Example: pln_2b3c4d5e6f7g
 	PlanRef *string `json:"planRef,omitempty"`
+
+	// ProcessorPaymentId The same id as intentId, under its former name, for SDK versions released before intentId. Read intentId.
+	//
+	// Example: pi_1a2b3c4d5e6f7g8h
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	ProcessorPaymentId *string `json:"processorPaymentId,omitempty"`
 
 	// PublishableKey Stripe publishable key for the environment
 	//
