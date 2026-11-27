@@ -4174,12 +4174,6 @@
             "example": "pln_2b3c4d5e6f7g",
             "type": "string"
           },
-          "processorPaymentId": {
-            "deprecated": true,
-            "description": "The same id as intentId, under its former name, for SDK versions released before intentId. Read intentId.",
-            "example": "pi_1a2b3c4d5e6f7g8h",
-            "type": "string"
-          },
           "status": {
             "description": "Payment intent status",
             "enum": [
@@ -4279,12 +4273,6 @@
           "planRef": {
             "description": "Plan reference",
             "example": "pln_2b3c4d5e6f7g",
-            "type": "string"
-          },
-          "processorPaymentId": {
-            "deprecated": true,
-            "description": "The same id as intentId, under its former name, for SDK versions released before intentId. Read intentId.",
-            "example": "pi_1a2b3c4d5e6f7g8h",
             "type": "string"
           },
           "publishableKey": {

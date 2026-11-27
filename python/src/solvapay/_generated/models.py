@@ -2068,13 +2068,6 @@ class SdkPaymentIntentListItem(BaseModel):
     """
     Plan reference
     """
-    processor_payment_id: Annotated[
-        str | None,
-        Field(alias="processorPaymentId", deprecated=True, examples=["pi_1a2b3c4d5e6f7g8h"]),
-    ] = None
-    """
-    The same id as intentId, under its former name, for SDK versions released before intentId. Read intentId.
-    """
     status: Annotated[
         Literal[
             "pending",
@@ -2161,13 +2154,6 @@ class SdkPaymentIntentResponse(BaseModel):
     plan_ref: Annotated[str | None, Field(alias="planRef", examples=["pln_2b3c4d5e6f7g"])] = None
     """
     Plan reference
-    """
-    processor_payment_id: Annotated[
-        str | None,
-        Field(alias="processorPaymentId", deprecated=True, examples=["pi_1a2b3c4d5e6f7g8h"]),
-    ] = None
-    """
-    The same id as intentId, under its former name, for SDK versions released before intentId. Read intentId.
     """
     publishable_key: Annotated[str, Field(alias="publishableKey", examples=["pk_test_..."])]
     """

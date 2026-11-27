@@ -2420,12 +2420,6 @@ export interface components {
        */
       planRef?: string
       /**
-       * @deprecated
-       * @description The same id as intentId, under its former name, for SDK versions released before intentId. Read intentId.
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
-      processorPaymentId?: string
-      /**
        * Payment intent status
        * @example succeeded
        * @enum {string}
@@ -2504,12 +2498,6 @@ export interface components {
        * @example pln_2b3c4d5e6f7g
        */
       planRef?: string
-      /**
-       * @deprecated
-       * @description The same id as intentId, under its former name, for SDK versions released before intentId. Read intentId.
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
-      processorPaymentId?: string
       /**
        * Stripe publishable key for the environment
        * @example pk_test_...
