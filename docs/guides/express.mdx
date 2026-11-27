@@ -148,7 +148,7 @@ app.post(
 )
 ```
 
-`getCustomerRef` may return your user id or a SolvaPay customer ref (`cus_…`) you stored. An empty string means anonymous.
+`getCustomerRef` may return your user id or a SolvaPay customer ref (`cus_…`) you stored. An empty string means no customer, and the request gets a 401.
 
 ### Option 2: Verified bearer tokens
 
@@ -163,7 +163,7 @@ The token's `sub` is your user id. It is always looked up by `externalRef`, neve
 
 If a gateway sets `x-customer-ref` on every request and nothing reaches your server without passing it, set `SOLVAPAY_AUTH_TRUST_GATEWAY=true`. Without that, a request carrying `x-customer-ref` gets a 401, so a client can't name another customer.
 
-A request with none of these is anonymous.
+A request with none of these has no customer. It gets a 401 with `identity required`, and SolvaPay is never called: there is no anonymous customer to bill.
 
 ## Error Handling
 

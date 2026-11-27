@@ -95,13 +95,31 @@ function mcpErrorResult(message: string) {
   return { content: [{ type: 'text', text: JSON.stringify({ error: message }) }], isError: true }
 }
 
+/**
+ * The caller's customer, or an error result when there is none. The API has
+ * no `anonymous` customer, so an unidentified caller is refused here, before
+ * any API call.
+ */
+function requireCustomerRef(
+  getCustomerRef: (args: Record<string, unknown>, extra?: McpToolExtra) => string,
+  args: Record<string, unknown>,
+  extra?: McpToolExtra,
+): string | ReturnType<typeof mcpErrorResult> {
+  const ref = getCustomerRef(args, extra)?.trim()
+  if (!ref || ref === 'anonymous') {
+    return mcpErrorResult('identity required: sign in to use this tool')
+  }
+  return ref
+}
+
 function createGetUserInfoHandler(
   apiClient: SolvaPayClient,
   productRef: string,
   getCustomerRef: (args: Record<string, unknown>, extra?: McpToolExtra) => string,
 ) {
   return async (args: Record<string, unknown>, extra?: McpToolExtra) => {
-    const customerRef = getCustomerRef(args, extra)
+    const customerRef = requireCustomerRef(getCustomerRef, args, extra)
+    if (typeof customerRef !== 'string') return customerRef
 
     try {
       if (!apiClient.getUserInfo) {
@@ -124,7 +142,8 @@ function createUpgradeHandler(
   getCustomerRef: (args: Record<string, unknown>, extra?: McpToolExtra) => string,
 ) {
   return async (args: Record<string, unknown>, extra?: McpToolExtra) => {
-    const customerRef = getCustomerRef(args, extra)
+    const customerRef = requireCustomerRef(getCustomerRef, args, extra)
+    if (typeof customerRef !== 'string') return customerRef
     const planRef = typeof args.planRef === 'string' ? args.planRef : undefined
 
     try {
@@ -163,7 +182,8 @@ function createManageAccountHandler(
   getCustomerRef: (args: Record<string, unknown>, extra?: McpToolExtra) => string,
 ) {
   return async (args: Record<string, unknown>, extra?: McpToolExtra) => {
-    const customerRef = getCustomerRef(args, extra)
+    const customerRef = requireCustomerRef(getCustomerRef, args, extra)
+    if (typeof customerRef !== 'string') return customerRef
 
     try {
       const session = await apiClient.createCustomerSession({ customerRef, productRef })

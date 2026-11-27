@@ -282,6 +282,9 @@ export class SolvaPayPaywall {
    * lookup / fresh `checkLimits` fetch, and returns a `PaywallDecision`
    * describing whether the handler should run.
    *
+   * Throws `identity_required` (401) before any API call when the caller
+   * has no customer (empty or `'anonymous'`).
+   *
    * Side effects kept in lockstep with the legacy `protect()` path:
    *  - creates the backend customer on first use (`ensureCustomer`),
    *  - updates the limits cache (consume-one-unit bookkeeping), and
@@ -308,14 +311,14 @@ export class SolvaPayPaywall {
       ? getCustomerRef(args)
       : args.auth?.customer_ref || 'anonymous'
 
-    if (metadata.freeLimit) {
-      const resolved = typeof inputCustomerRef === 'string' ? inputCustomerRef.trim() : ''
-      if (!resolved || resolved === 'anonymous') {
-        throw new SolvaPayError('identity required', {
-          status: 401,
-          code: 'identity_required',
-        })
-      }
+    // Every check needs a customer the API knows. An unidentified caller is
+    // refused here, before any API call: there is no shared anonymous bucket.
+    const resolved = typeof inputCustomerRef === 'string' ? inputCustomerRef.trim() : ''
+    if (!resolved || resolved === 'anonymous') {
+      throw new SolvaPayError('identity required', {
+        status: 401,
+        code: 'identity_required',
+      })
     }
 
     let backendCustomerRef: string

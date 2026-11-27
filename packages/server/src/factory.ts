@@ -163,8 +163,9 @@ export interface PayableGateOptions {
   /**
    * Resolve the customer ref from the incoming request. Without it, the
    * customer comes from a verified bearer token, or from `x-customer-ref`
-   * only with `SOLVAPAY_AUTH_TRUST_GATEWAY=true`; otherwise the request is
-   * anonymous. Use it for your own sessions, signed cookies or API keys.
+   * only with `SOLVAPAY_AUTH_TRUST_GATEWAY=true`. A request with none of these
+   * has no customer and is refused (401, `identity_required`). Use it for your
+   * own sessions, signed cookies or API keys.
    */
   getCustomerRef?: (req: Request) => string | Promise<string>
   /**
@@ -1231,10 +1232,11 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
 /**
  * Who a `payable.gate(req)` call is for. `options.getCustomerRef(req)` wins
- * (trimmed; empty means anonymous); otherwise `identifyRequest`: a verified
- * bearer token, `x-customer-ref` behind a trusted gateway, or anonymous.
+ * (trimmed; empty means no customer); otherwise `identifyRequest`: a verified
+ * bearer token, `x-customer-ref` behind a trusted gateway, or no customer.
  * Throws a 401 `SolvaPayError` for an unverifiable token or an untrusted
- * `x-customer-ref`.
+ * `x-customer-ref`; the paywall refuses a request with no customer
+ * (`identity_required`).
  */
 async function identifyGateRequest(
   req: Request,

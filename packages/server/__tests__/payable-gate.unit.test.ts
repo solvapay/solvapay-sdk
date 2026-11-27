@@ -260,12 +260,26 @@ describe('payable.gate()', () => {
       expect(result.customerRef).toBe('cus_hdr_user')
     })
 
-    it('falls back to "anonymous" when neither option nor header are provided', async () => {
+    it('refuses a request with no customer, before calling SolvaPay', async () => {
+      const checkLimits = vi.spyOn(client, 'checkLimits')
+      const trackUsage = vi.spyOn(client, 'trackUsage')
       const payable = solvaPay.payable({ productRef: 'prd_chat' })
       const req = new Request('http://localhost/api/chat')
-      const result = await payable.gate(req)
-      if (result.kind !== 'allow') throw new Error('expected allow')
-      expect(result.customerRef).toBe('anonymous')
+      await expect(payable.gate(req)).rejects.toMatchObject({
+        status: 401,
+        code: 'identity_required',
+      })
+      expect(checkLimits).not.toHaveBeenCalled()
+      expect(trackUsage).not.toHaveBeenCalled()
+    })
+
+    it('refuses a getCustomerRef that returns no customer', async () => {
+      const payable = solvaPay.payable({ productRef: 'prd_chat' })
+      const req = new Request('http://localhost/api/chat')
+      await expect(payable.gate(req, { getCustomerRef: () => '' })).rejects.toMatchObject({
+        status: 401,
+        code: 'identity_required',
+      })
     })
   })
 })

@@ -65,7 +65,7 @@ curl -X POST http://localhost:3000/tasks \
   -d '{"title":"My first task"}'
 ```
 
-Without `getCustomerRef`, `payable.http` takes the customer only from a verified bearer token (`SOLVAPAY_JWT_SECRET`, `SOLVAPAY_JWKS_URL` or Supabase), or from an `x-customer-ref` header behind a gateway you trust (`SOLVAPAY_AUTH_TRUST_GATEWAY=true`). An `x-customer-ref` sent without that opt-in gets a 401, and a request with neither is anonymous.
+Without `getCustomerRef`, `payable.http` takes the customer only from a verified bearer token (`SOLVAPAY_JWT_SECRET`, `SOLVAPAY_JWKS_URL` or Supabase), or from an `x-customer-ref` header behind a gateway you trust (`SOLVAPAY_AUTH_TRUST_GATEWAY=true`). An `x-customer-ref` sent without that opt-in gets a 401, and so does a request with neither (`identity_required`): there is no anonymous customer.
 
 ## 3) Continue by framework
 

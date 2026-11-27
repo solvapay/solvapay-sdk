@@ -43,8 +43,8 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
 
   /**
    * `getCustomerRef` when given; otherwise a verified bearer token (a user),
-   * `x-customer-ref` behind a trusted gateway, or anonymous. See
-   * `identifyRequest`.
+   * `x-customer-ref` behind a trusted gateway, or no customer, which the
+   * paywall refuses with 401. See `identifyRequest`.
    */
   async getIdentity([req, _reply]: HttpContext): Promise<RequestIdentity> {
     if (this.options.getCustomerRef) {
