@@ -20,7 +20,7 @@
           "method": "POST",
           "path": "/v1/sdk/payment-intents",
           "body": {
-            "processorPaymentId": "pi_tl11",
+            "intentId": "pi_tl11",
             "clientSecret": "pi_tl11_secret",
             "publishableKey": "pk_test_tl",
             "amount": 2500,
@@ -39,7 +39,7 @@
         {
           "type": "text",
           "json": {
-            "processorPaymentId": "pi_tl11",
+            "intentId": "pi_tl11",
             "clientSecret": "pi_tl11_secret",
             "publishableKey": "pk_test_tl",
             "customerRef": "cus_TL11"
@@ -47,7 +47,7 @@
         }
       ],
       "structuredContent": {
-        "processorPaymentId": "pi_tl11",
+        "intentId": "pi_tl11",
         "clientSecret": "pi_tl11_secret",
         "publishableKey": "pk_test_tl",
         "customerRef": "cus_TL11"

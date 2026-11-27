@@ -24,7 +24,7 @@ describe('multi-currency client transport', () => {
   it('createPaymentIntent includes currency in the SDK request body when provided', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({
-        processorPaymentId: 'pi_test',
+        intentId: 'pi_test',
         clientSecret: 'cs_test',
         publishableKey: 'pk_test',
         amount: 2200,
@@ -55,7 +55,7 @@ describe('multi-currency client transport', () => {
   it('createPaymentIntent omits currency when not provided', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({
-        processorPaymentId: 'pi_test',
+        intentId: 'pi_test',
         clientSecret: 'cs_test',
         publishableKey: 'pk_test',
         amount: 2500,

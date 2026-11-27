@@ -11,7 +11,7 @@ export interface UseCheckoutReturn {
   error: Error | null
   stripePromise: Promise<Stripe | null> | null
   clientSecret: string | null
-  processorPaymentId: string | null
+  intentId: string | null
   resolvedPlanRef: string | null
   startCheckout: () => Promise<void>
   reset: () => void
@@ -44,10 +44,7 @@ async function resolvePlanRef(
   const res = await fetchFn(url, { method: 'GET', headers })
 
   if (!res.ok) {
-    const message = await readErrorMessage(
-      res,
-      `Failed to fetch plans for product "${productRef}"`,
-    )
+    const message = await readErrorMessage(res, `Failed to fetch plans for product "${productRef}"`)
     throw new Error(message)
   }
 
@@ -112,7 +109,7 @@ export function useCheckout(options: {
   const [error, setError] = useState<Error | null>(null)
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
-  const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
+  const [intentId, setIntentId] = useState<string | null>(null)
   const [resolvedPlanRef, setResolvedPlanRef] = useState<string | null>(planRef || null)
   const isStartingRef = useRef(false)
 
@@ -186,8 +183,8 @@ export function useCheckout(options: {
 
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
-      if (result.processorPaymentId) {
-        setProcessorPaymentId(result.processorPaymentId)
+      if (result.intentId) {
+        setIntentId(result.intentId)
       }
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start checkout')
@@ -214,7 +211,7 @@ export function useCheckout(options: {
     setError(null)
     setStripePromise(null)
     setClientSecret(null)
-    setProcessorPaymentId(null)
+    setIntentId(null)
     setResolvedPlanRef(planRef || null)
   }, [planRef])
 
@@ -223,7 +220,7 @@ export function useCheckout(options: {
     error,
     stripePromise,
     clientSecret,
-    processorPaymentId,
+    intentId,
     resolvedPlanRef,
     startCheckout,
     reset,

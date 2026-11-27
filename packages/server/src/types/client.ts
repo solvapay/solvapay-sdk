@@ -111,10 +111,8 @@ true satisfies AssertEqual<
  * backend's `/sdk/payment-intents/:id/process` response verbatim and
  * are what the SDK's `processTopupPayment` exposes to `TopupForm`.
  *
- * `succeeded` means the backend observed the PI reach succeeded AND
- * the credit transaction has been booked (see step 5 of
- * `stripe-payment-webhook.handler.ts` — credit booking happens in the
- * same handler invocation that flips PI status). `timeout` carries a
+ * `succeeded` means the backend observed the PI reach succeeded; the
+ * backend books the credit before it flips the PI status. `timeout` carries a
  * soft retry hint; `failed` / `cancelled` route to the error branch.
  *
  * `creditsAdded` is the wallet delta observed by the backend helper's

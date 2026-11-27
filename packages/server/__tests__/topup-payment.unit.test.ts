@@ -37,10 +37,7 @@ describe('createTopupPaymentIntentCore', () => {
   })
 
   it('returns error when amount is missing', async () => {
-    const result = await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: 0, currency: 'USD' },
-    )
+    const result = await createTopupPaymentIntentCore(makeRequest(), { amount: 0, currency: 'USD' })
 
     expect(isErrorResult(result)).toBe(true)
     expect((result as ErrorResult).status).toBe(400)
@@ -48,10 +45,10 @@ describe('createTopupPaymentIntentCore', () => {
   })
 
   it('returns error when amount is negative', async () => {
-    const result = await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: -500, currency: 'USD' },
-    )
+    const result = await createTopupPaymentIntentCore(makeRequest(), {
+      amount: -500,
+      currency: 'USD',
+    })
 
     expect(isErrorResult(result)).toBe(true)
     expect((result as ErrorResult).status).toBe(400)
@@ -59,10 +56,7 @@ describe('createTopupPaymentIntentCore', () => {
   })
 
   it('returns error when currency is missing', async () => {
-    const result = await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: 1000, currency: '' },
-    )
+    const result = await createTopupPaymentIntentCore(makeRequest(), { amount: 1000, currency: '' })
 
     expect(isErrorResult(result)).toBe(true)
     expect((result as ErrorResult).status).toBe(400)
@@ -70,10 +64,10 @@ describe('createTopupPaymentIntentCore', () => {
   })
 
   it('returns 400 when currency is not uppercase ISO 4217', async () => {
-    const result = await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: 1000, currency: 'usd' },
-    )
+    const result = await createTopupPaymentIntentCore(makeRequest(), {
+      amount: 1000,
+      currency: 'usd',
+    })
 
     expect(isErrorResult(result)).toBe(true)
     expect((result as ErrorResult).status).toBe(400)
@@ -84,10 +78,10 @@ describe('createTopupPaymentIntentCore', () => {
     const syncError: ErrorResult = { error: 'Unauthorized', status: 401 }
     mockSyncCustomer.mockResolvedValueOnce(syncError)
 
-    const result = await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: 1000, currency: 'USD' },
-    )
+    const result = await createTopupPaymentIntentCore(makeRequest(), {
+      amount: 1000,
+      currency: 'USD',
+    })
 
     expect(isErrorResult(result)).toBe(true)
     expect(result).toEqual(syncError)
@@ -95,7 +89,7 @@ describe('createTopupPaymentIntentCore', () => {
 
   it('syncs customer then creates topup payment intent', async () => {
     const mockPaymentIntent = {
-      processorPaymentId: 'pi_topup_abc',
+      intentId: 'pi_topup_abc',
       clientSecret: 'pi_topup_abc_secret',
       publishableKey: 'pk_test_xyz',
       accountId: 'acct_123',
@@ -108,14 +102,15 @@ describe('createTopupPaymentIntentCore', () => {
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
 
-    const result = await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: 5000, currency: 'USD', description: 'Top up credits' },
-    )
+    const result = await createTopupPaymentIntentCore(makeRequest(), {
+      amount: 5000,
+      currency: 'USD',
+      description: 'Top up credits',
+    })
 
     expect(isErrorResult(result)).toBe(false)
     expect(result).toEqual({
-      processorPaymentId: 'pi_topup_abc',
+      intentId: 'pi_topup_abc',
       clientSecret: 'pi_topup_abc_secret',
       publishableKey: 'pk_test_xyz',
       accountId: 'acct_123',
@@ -143,17 +138,18 @@ describe('createTopupPaymentIntentCore', () => {
 
     const mockSolvaPay = {
       createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
-        processorPaymentId: 'pi_topup_auto',
+        intentId: 'pi_topup_auto',
         clientSecret: 'cs_auto',
         publishableKey: 'pk_test',
       }),
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
 
-    await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: 5000, currency: 'USD', autoRecharge },
-    )
+    await createTopupPaymentIntentCore(makeRequest(), {
+      amount: 5000,
+      currency: 'USD',
+      autoRecharge,
+    })
 
     expect(mockSolvaPay.createTopupPaymentIntent).toHaveBeenCalledWith({
       customerRef: 'cus_TOPUP1',
@@ -168,17 +164,17 @@ describe('createTopupPaymentIntentCore', () => {
 
     const mockSolvaPay = {
       createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
-        processorPaymentId: 'pi_1',
+        intentId: 'pi_1',
         clientSecret: 'cs_1',
         publishableKey: 'pk_1',
       }),
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
 
-    const result = await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: 2000, currency: 'EUR' },
-    )
+    const result = await createTopupPaymentIntentCore(makeRequest(), {
+      amount: 2000,
+      currency: 'EUR',
+    })
 
     expect(isErrorResult(result)).toBe(false)
     const success = result as { customerRef: string }
@@ -193,10 +189,10 @@ describe('createTopupPaymentIntentCore', () => {
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
 
-    const result = await createTopupPaymentIntentCore(
-      makeRequest(),
-      { amount: 1000, currency: 'USD' },
-    )
+    const result = await createTopupPaymentIntentCore(makeRequest(), {
+      amount: 1000,
+      currency: 'USD',
+    })
 
     expect(isErrorResult(result)).toBe(true)
     expect((result as ErrorResult).status).toBe(500)
@@ -207,7 +203,7 @@ describe('createTopupPaymentIntentCore', () => {
 
     const providedSolvaPay = {
       createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
-        processorPaymentId: 'pi_p',
+        intentId: 'pi_p',
         clientSecret: 'cs_p',
         publishableKey: 'pk_p',
       }),

@@ -4096,11 +4096,6 @@
             "example": "Greater London",
             "type": "string"
           },
-          "statementDescriptor": {
-            "description": "Descriptor appearing on the customer card statement",
-            "example": "ACME INC",
-            "type": "string"
-          },
           "supportEmail": {
             "example": "support@acme.com",
             "type": "string"
@@ -4169,14 +4164,14 @@
             "example": "usd",
             "type": "string"
           },
+          "intentId": {
+            "description": "The payment intent id on the protocol",
+            "example": "pi_1a2b3c4d5e6f7g8h",
+            "type": "string"
+          },
           "planRef": {
             "description": "Plan reference",
             "example": "pln_2b3c4d5e6f7g",
-            "type": "string"
-          },
-          "processorPaymentId": {
-            "description": "Payment processor payment intent ID",
-            "example": "pi_1a2b3c4d5e6f7g8h",
             "type": "string"
           },
           "status": {
@@ -4196,7 +4191,7 @@
           }
         },
         "required": [
-          "processorPaymentId",
+          "intentId",
           "amount",
           "currency",
           "status"
@@ -4265,6 +4260,11 @@
             "example": "2025-10-19T10:30:00.000Z",
             "type": "string"
           },
+          "intentId": {
+            "description": "The payment intent id on the protocol",
+            "example": "pi_1a2b3c4d5e6f7g8h",
+            "type": "string"
+          },
           "originalAmount": {
             "description": "Charge-currency amount in minor units (the currency the customer is billed in)",
             "example": 4999,
@@ -4273,11 +4273,6 @@
           "planRef": {
             "description": "Plan reference",
             "example": "pln_2b3c4d5e6f7g",
-            "type": "string"
-          },
-          "processorPaymentId": {
-            "description": "Payment processor payment intent ID",
-            "example": "pi_1a2b3c4d5e6f7g8h",
             "type": "string"
           },
           "publishableKey": {
@@ -4307,7 +4302,7 @@
           }
         },
         "required": [
-          "processorPaymentId",
+          "intentId",
           "amount",
           "currency",
           "status",
@@ -8179,7 +8174,7 @@
         ]
       }
     },
-    "/v1/sdk/payment-intents/{processorPaymentId}/business-details": {
+    "/v1/sdk/payment-intents/{intentId}/business-details": {
       "post": {
         "description": "Applies business or consumer tax location to a payment intent and returns the calculated tax breakdown.",
         "operationId": "PaymentIntentSdkController_attachBusinessDetails",
@@ -8187,7 +8182,7 @@
           {
             "description": "Stripe payment intent ID (pi_…)",
             "in": "path",
-            "name": "processorPaymentId",
+            "name": "intentId",
             "required": true,
             "schema": {
               "type": "string"
@@ -8277,15 +8272,15 @@
         ]
       }
     },
-    "/v1/sdk/payment-intents/{processorPaymentId}/process": {
+    "/v1/sdk/payment-intents/{intentId}/process": {
       "post": {
         "description": "Processes a payment intent that has been confirmed on the client side. Polls the database for payment intent status to become succeeded. Returns the current status of the payment intent; on success, the response is enriched with the Purchase row created by the webhook handler.",
         "operationId": "PaymentIntentSdkController_processPaymentIntent",
         "parameters": [
           {
-            "description": "Payment processor ID returned from createPaymentIntent",
+            "description": "The intent id returned from createPaymentIntent",
             "in": "path",
-            "name": "processorPaymentId",
+            "name": "intentId",
             "required": true,
             "schema": {
               "example": "pi_1a2b3c4d5e6f7g8h",
@@ -8399,7 +8394,7 @@
         "operationId": "PaymentIntentSdkController_getPaymentIntent",
         "parameters": [
           {
-            "description": "Payment intent reference or processor payment ID",
+            "description": "Payment intent reference or the intent id on the protocol",
             "in": "path",
             "name": "reference",
             "required": true,

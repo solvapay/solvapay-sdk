@@ -43,7 +43,7 @@ describe('createPaymentIntentCore', () => {
     vi.clearAllMocks()
     mockSyncCustomer.mockResolvedValue('cus_ABC')
     mockCreatePaymentIntent.mockResolvedValue({
-      processorPaymentId: 'pi_test',
+      intentId: 'pi_test',
       clientSecret: 'cs_test',
       publishableKey: 'pk_test',
       accountId: 'acct_test',
@@ -84,7 +84,7 @@ describe('createPaymentIntentCore', () => {
       currency: 'EUR',
     })
     expect(result).toMatchObject({
-      processorPaymentId: 'pi_test',
+      intentId: 'pi_test',
       clientSecret: 'cs_test',
       publishableKey: 'pk_test',
       customerRef: 'cus_ABC',
@@ -253,9 +253,8 @@ describe('processTopupPaymentIntentCore', () => {
 // Post-success balance polling — backend-authoritative convergence.
 //
 // `/process` returning `status: 'succeeded'` means the PI is in a
-// terminal state, but the Stripe webhook handler may still be writing
-// the TOPUP credit transaction (step 5 of
-// stripe-payment-webhook.handler.ts). The helper captures a balance
+// terminal state, which does not prove the TOPUP credit was booked: the
+// backend does not fail a payment whose credit booking failed. The helper captures a balance
 // baseline before `processPaymentIntent` and polls post-success on a
 // backoff until the wallet observes the delta, then returns
 // `creditsAdded` so the React side can bump the in-memory balance

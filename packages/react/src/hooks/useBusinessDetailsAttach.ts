@@ -25,7 +25,7 @@ export type AttachBusinessDetailsFn = (params: {
 }) => Promise<{ taxBreakdown: TaxBreakdown }>
 
 export interface UseBusinessDetailsAttachOptions {
-  processorPaymentId: string | null | undefined
+  intentId: string | null | undefined
   attachBusinessDetails?: AttachBusinessDetailsFn
   customerRef?: string
   onTaxChange?: (breakdown: TaxBreakdown) => void
@@ -48,13 +48,7 @@ export interface UseBusinessDetailsAttachReturn {
 export function useBusinessDetailsAttach(
   options: UseBusinessDetailsAttachOptions,
 ): UseBusinessDetailsAttachReturn {
-  const {
-    processorPaymentId,
-    attachBusinessDetails,
-    customerRef,
-    onTaxChange,
-    refreshElements,
-  } = options
+  const { intentId, attachBusinessDetails, customerRef, onTaxChange, refreshElements } = options
 
   const [businessDetails, setBusinessDetailsState] =
     useState<BusinessDetailsInput>(defaultBusinessDetails)
@@ -91,7 +85,7 @@ export function useBusinessDetailsAttach(
 
   const runAttach = useCallback(
     async (input: BusinessDetailsInput): Promise<boolean> => {
-      if (!processorPaymentId || !attachBusinessDetails) {
+      if (!intentId || !attachBusinessDetails) {
         return !attachBusinessDetails
       }
 
@@ -111,7 +105,7 @@ export function useBusinessDetailsAttach(
 
       try {
         const result = await attachBusinessDetails({
-          paymentIntentId: processorPaymentId,
+          paymentIntentId: intentId,
           ...(customerRef ? { customerRef } : {}),
           ...validation.data,
         })
@@ -136,11 +130,11 @@ export function useBusinessDetailsAttach(
         }
       }
     },
-    [processorPaymentId, attachBusinessDetails, customerRef, onTaxChange, refreshElements],
+    [intentId, attachBusinessDetails, customerRef, onTaxChange, refreshElements],
   )
 
   useEffect(() => {
-    if (!processorPaymentId || !attachBusinessDetails) return
+    if (!intentId || !attachBusinessDetails) return
 
     const validation = validateBusinessDetails(businessDetails)
     if (!validation.success || !isCustomerAddressComplete(businessDetails)) {
@@ -162,7 +156,7 @@ export function useBusinessDetailsAttach(
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [businessDetails, processorPaymentId, attachBusinessDetails, runAttach])
+  }, [businessDetails, intentId, attachBusinessDetails, runAttach])
 
   const requiresBusinessAttach = !!attachBusinessDetails
 

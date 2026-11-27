@@ -53,10 +53,7 @@ import {
 import { useCustomer } from '../hooks/useCustomer'
 import { buildConfirmBillingDetails, confirmPayment } from '../utils/confirmPayment'
 import type { TopupFormProps } from '../types'
-import {
-  readPaymentIntentClientSecret,
-  stripPaymentIntentParams,
-} from './paymentIntentReturn'
+import { readPaymentIntentClientSecret, stripPaymentIntentParams } from './paymentIntentReturn'
 import {
   useBusinessDetailsAttach,
   type UseBusinessDetailsAttachReturn,
@@ -74,7 +71,7 @@ type TopupFormContextValue = {
   currency?: string
   state: TopupFormState
   clientSecret: string | null
-  processorPaymentId: string | null
+  intentId: string | null
   stripe: Stripe | null
   elements: StripeElements | null
   isReady: boolean
@@ -143,7 +140,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     loading,
     error: topupError,
     clientSecret,
-    processorPaymentId,
+    intentId,
     startTopup,
     stripePromise,
   } = useTopup({
@@ -197,18 +194,13 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       : 'loading'
 
   const appearanceReady = appearance !== undefined || rootEl !== null
-  const canMountElements = !!(
-    stripePromise &&
-    clientSecret &&
-    elementsOptions &&
-    appearanceReady
-  )
+  const canMountElements = !!(stripePromise && clientSecret && elementsOptions && appearanceReady)
 
   // Owned on Root so country/state/postal survive the OfflineInner → Inner
   // swap when the PaymentIntent arrives. OfflineInner used to no-op
   // `setBusinessDetails`, which dropped the buyer country before attach.
   const businessAttach = useBusinessDetailsAttach({
-    processorPaymentId,
+    intentId,
     attachBusinessDetails,
     customerRef,
     onTaxChange,
@@ -218,7 +210,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     amount,
     currency,
     clientSecret,
-    processorPaymentId,
+    intentId,
     returnUrl: finalReturnUrl,
     outerError,
     state: dataState,
@@ -275,7 +267,7 @@ type InnerProps = {
   amount: number
   currency?: string
   clientSecret: string | null
-  processorPaymentId: string | null
+  intentId: string | null
   returnUrl: string
   outerError: string | null
   state: TopupFormState
@@ -295,7 +287,9 @@ type InnerProps = {
    * argument so the checkout flow can optimistically bump the
    * in-memory balance before its deterministic refetch lands.
    */
-  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<
+  processTopupPayment?: (params: {
+    paymentIntentId: string
+  }) => Promise<
     | { status: 'succeeded'; creditsAdded?: number }
     | { status: 'processing' }
     | { status: 'timeout'; message?: string }
@@ -310,7 +304,7 @@ const Inner: React.FC<InnerProps> = ({
   amount,
   currency,
   clientSecret,
-  processorPaymentId,
+  intentId,
   returnUrl,
   outerError,
   state,
@@ -338,7 +332,12 @@ const Inner: React.FC<InnerProps> = ({
 
   useEffect(() => {
     const stripeApi = stripeRef.current
-    if (!stripeAvailable || !stripeApi || returnResumeStarted.current || typeof window === 'undefined') {
+    if (
+      !stripeAvailable ||
+      !stripeApi ||
+      returnResumeStarted.current ||
+      typeof window === 'undefined'
+    ) {
       return
     }
     const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
@@ -479,7 +478,11 @@ const Inner: React.FC<InnerProps> = ({
       copy,
     })
 
-    if (result.status === 'error' || result.status === 'requires_action' || result.status === 'other') {
+    if (
+      result.status === 'error' ||
+      result.status === 'requires_action' ||
+      result.status === 'other'
+    ) {
       setError(result.message)
       setIsProcessing(false)
       if (result.status === 'error') {
@@ -525,10 +528,7 @@ const Inner: React.FC<InnerProps> = ({
 
     setIsProcessing(false)
     if (paymentIntent) {
-      await onSuccess?.(
-        paymentIntent,
-        creditsAdded !== undefined ? { creditsAdded } : undefined,
-      )
+      await onSuccess?.(paymentIntent, creditsAdded !== undefined ? { creditsAdded } : undefined)
     }
   }, [
     stripe,
@@ -555,7 +555,7 @@ const Inner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
-      processorPaymentId,
+      intentId,
       stripe,
       elements,
       isReady,
@@ -579,7 +579,7 @@ const Inner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
-      processorPaymentId,
+      intentId,
       stripe,
       elements,
       isReady,
@@ -607,7 +607,7 @@ const OfflineInner: React.FC<InnerProps> = ({
   amount,
   currency,
   clientSecret,
-  processorPaymentId,
+  intentId,
   returnUrl,
   outerError,
   state,
@@ -622,7 +622,7 @@ const OfflineInner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
-      processorPaymentId,
+      intentId,
       stripe: null,
       elements: null,
       isReady: false,
@@ -646,7 +646,7 @@ const OfflineInner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
-      processorPaymentId,
+      intentId,
       outerError,
       returnUrl,
       businessAttach,
@@ -735,7 +735,10 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
             )
           : children
       return (
-        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
+        <Slot
+          ref={forwardedRef as React.Ref<HTMLElement>}
+          {...(commonProps as Record<string, unknown>)}
+        >
           {slotChild}
         </Slot>
       )

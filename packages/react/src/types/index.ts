@@ -34,7 +34,7 @@ export interface PaymentIntentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string // Backend customer reference
-  processorPaymentId?: string
+  intentId?: string
 }
 
 /**
@@ -102,7 +102,7 @@ export interface TopupPaymentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string
-  processorPaymentId?: string
+  intentId?: string
 }
 
 export interface UseTopupOptions {
@@ -116,7 +116,7 @@ export interface UseTopupReturn {
   error: Error | null
   stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
   clientSecret: string | null
-  processorPaymentId: string | null
+  intentId: string | null
   startTopup: () => Promise<void>
   reset: () => void
 }

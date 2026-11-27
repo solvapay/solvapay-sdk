@@ -13,7 +13,7 @@ export interface PaymentFormContextValue {
   resolvedPlanRef: string | null
   plan: Plan | null
   clientSecret: string | null
-  processorPaymentId: string | null
+  intentId: string | null
   stripe: Stripe | null
   elements: StripeElements | null
   isProcessing: boolean

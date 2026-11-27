@@ -59,18 +59,12 @@ import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
 import { buildConfirmBillingDetails, confirmPayment } from '../utils/confirmPayment'
 import { reconcilePayment } from '../utils/processPaymentResult'
-import {
-  readPaymentIntentClientSecret,
-  stripPaymentIntentParams,
-} from './paymentIntentReturn'
+import { readPaymentIntentClientSecret, stripPaymentIntentParams } from './paymentIntentReturn'
 import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { resolveCta } from '../utils/checkoutCta'
 import { formatPrice } from '../utils/format'
-import {
-  useBusinessDetailsAttach,
-  defaultBusinessDetails,
-} from '../hooks/useBusinessDetailsAttach'
+import { useBusinessDetailsAttach, defaultBusinessDetails } from '../hooks/useBusinessDetailsAttach'
 import {
   createBusinessDetailsParts,
   createTaxSummaryParts,
@@ -150,7 +144,7 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
       loading: checkoutLoading,
       error: checkoutError,
       clientSecret,
-      processorPaymentId,
+      intentId,
       startCheckout,
       stripePromise,
       resolvedPlanRef,
@@ -205,13 +199,14 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
     const appearanceReady = appearance !== undefined || rootEl !== null
     const shouldRenderElements = !!(stripePromise && clientSecret && appearanceReady)
 
-    const dataState = !hasPlanOrProduct || checkoutError
-      ? 'error'
-      : isFreePlan && resolvedPlan
-        ? 'ready'
-        : shouldRenderElements
+    const dataState =
+      !hasPlanOrProduct || checkoutError
+        ? 'error'
+        : isFreePlan && resolvedPlan
           ? 'ready'
-          : 'loading'
+          : shouldRenderElements
+            ? 'ready'
+            : 'loading'
     const dataVariant =
       isFreePlan && resolvedPlan ? 'free' : shouldRenderElements ? 'paid' : undefined
 
@@ -272,7 +267,7 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
               resolvedPlanRef={resolvedPlanRef}
               plan={resolvedPlan ?? null}
               clientSecret={clientSecret}
-              processorPaymentId={processorPaymentId}
+              intentId={intentId}
               returnUrl={finalReturnUrl}
               submitButtonText={submitButtonText}
               buttonClassName={buttonClassName}
@@ -304,7 +299,7 @@ const PaidInner: React.FC<{
   resolvedPlanRef: string | null
   plan: Plan | null
   clientSecret: string
-  processorPaymentId: string | null
+  intentId: string | null
   returnUrl: string
   submitButtonText?: string
   buttonClassName?: string
@@ -323,7 +318,7 @@ const PaidInner: React.FC<{
   resolvedPlanRef,
   plan,
   clientSecret,
-  processorPaymentId,
+  intentId,
   returnUrl,
   submitButtonText,
   buttonClassName,
@@ -362,7 +357,7 @@ const PaidInner: React.FC<{
     requiresBusinessAttach,
     runAttach,
   } = useBusinessDetailsAttach({
-    processorPaymentId,
+    intentId,
     attachBusinessDetails,
     customerRef,
     onTaxChange,
@@ -385,7 +380,12 @@ const PaidInner: React.FC<{
 
   useEffect(() => {
     const stripeApi = stripeRef.current
-    if (!stripeAvailable || !stripeApi || returnResumeStarted.current || typeof window === 'undefined') {
+    if (
+      !stripeAvailable ||
+      !stripeApi ||
+      returnResumeStarted.current ||
+      typeof window === 'undefined'
+    ) {
       return
     }
     const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
@@ -452,7 +452,10 @@ const PaidInner: React.FC<{
           try {
             await refetch()
           } catch (error) {
-            console.error('[PaymentForm] secondary purchase refetch failed after return-path success', error)
+            console.error(
+              '[PaymentForm] secondary purchase refetch failed after return-path success',
+              error,
+            )
           }
         }
         onSuccess?.(paymentIntent)
@@ -595,7 +598,10 @@ const PaidInner: React.FC<{
           try {
             await refetch()
           } catch (error) {
-            console.error('[PaymentForm] secondary purchase refetch failed after submit success', error)
+            console.error(
+              '[PaymentForm] secondary purchase refetch failed after submit success',
+              error,
+            )
           }
         }
 
@@ -650,7 +656,7 @@ const PaidInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret,
-      processorPaymentId,
+      intentId,
       stripe,
       elements,
       isProcessing,
@@ -685,7 +691,7 @@ const PaidInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret,
-      processorPaymentId,
+      intentId,
       stripe,
       elements,
       isProcessing,
@@ -797,7 +803,7 @@ const FreeInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret: null,
-      processorPaymentId: null,
+      intentId: null,
       stripe: null,
       elements: null,
       isProcessing,
@@ -874,7 +880,7 @@ const PendingInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret: null,
-      processorPaymentId: null,
+      intentId: null,
       stripe: null,
       elements: null,
       isProcessing: false,
@@ -1128,7 +1134,7 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
     const baseMinor = ctx.taxBreakdown?.total ?? plan?.price ?? ctx.plan?.price ?? 0
     const amountFormatted = formatPrice(baseMinor, ctx.taxBreakdown?.currency ?? planCurrency, {
       locale,
-      interval: variant === 'recurring' ? plan?.interval ?? ctx.plan?.interval : undefined,
+      interval: variant === 'recurring' ? (plan?.interval ?? ctx.plan?.interval) : undefined,
       intervalCount: variant === 'recurring' ? 1 : undefined,
       free: copy.interval.free,
     })

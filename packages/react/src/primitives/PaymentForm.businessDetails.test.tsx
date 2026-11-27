@@ -41,9 +41,7 @@ const mockTaxBreakdown: TaxBreakdown = {
 
 const stripeMocks = vi.hoisted(() => ({
   submit: vi.fn<() => Promise<{ error?: { message: string } }>>(),
-  confirmPayment: vi.fn<
-    () => Promise<PaymentIntentResult>
-  >(),
+  confirmPayment: vi.fn<() => Promise<PaymentIntentResult>>(),
   fetchUpdates: vi.fn<() => Promise<{ error?: { message: string } }>>(),
 }))
 
@@ -91,7 +89,7 @@ vi.mock('../hooks/useCheckout', () => ({
     error: null,
     stripePromise: Promise.resolve({}),
     clientSecret: 'pi_secret',
-    processorPaymentId: 'pi_test_123',
+    intentId: 'pi_test_123',
     resolvedPlanRef: 'pln_test',
     startCheckout: vi.fn(),
     reset: vi.fn(),
@@ -137,13 +135,7 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
   }
 }
 
-function Wrap({
-  value,
-  children,
-}: {
-  value: SolvaPayContextValue
-  children: React.ReactNode
-}) {
+function Wrap({ value, children }: { value: SolvaPayContextValue; children: React.ReactNode }) {
   return React.createElement(SolvaPayContext.Provider, { value }, children)
 }
 
@@ -158,7 +150,7 @@ describe('PaymentForm business details + tax summary', () => {
     attachHookMock.runAttach.mockResolvedValue(true)
   })
 
-  it('wires processorPaymentId and attach transport into useBusinessDetailsAttach', async () => {
+  it('wires intentId and attach transport into useBusinessDetailsAttach', async () => {
     const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: mockTaxBreakdown })
     const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
 
@@ -174,7 +166,7 @@ describe('PaymentForm business details + tax summary', () => {
     await waitFor(() => expect(useBusinessDetailsAttach).toHaveBeenCalled())
     expect(useBusinessDetailsAttach).toHaveBeenCalledWith(
       expect.objectContaining({
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
         attachBusinessDetails,
       }),
     )

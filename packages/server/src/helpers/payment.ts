@@ -72,7 +72,7 @@ export async function createPaymentIntentCore(
   } = {},
 ): Promise<
   | {
-      processorPaymentId: string
+      intentId: string
       clientSecret: string
       publishableKey: string
       accountId?: string
@@ -110,7 +110,7 @@ export async function createPaymentIntentCore(
     })
 
     return {
-      processorPaymentId: paymentIntent.processorPaymentId,
+      intentId: paymentIntent.intentId,
       clientSecret: paymentIntent.clientSecret,
       publishableKey: paymentIntent.publishableKey,
       accountId: paymentIntent.accountId,
@@ -151,7 +151,7 @@ export async function createTopupPaymentIntentCore(
   } = {},
 ): Promise<
   | {
-      processorPaymentId: string
+      intentId: string
       clientSecret: string
       publishableKey: string
       accountId?: string
@@ -204,7 +204,7 @@ export async function createTopupPaymentIntentCore(
     })
 
     return {
-      processorPaymentId: paymentIntent.processorPaymentId,
+      intentId: paymentIntent.intentId,
       clientSecret: paymentIntent.clientSecret,
       publishableKey: paymentIntent.publishableKey,
       accountId: paymentIntent.accountId,
@@ -229,7 +229,7 @@ export async function createTopupPaymentIntentCore(
  *
  * @param request - Standard Web API Request object
  * @param body - Payment processing parameters
- * @param body.paymentIntentId - Processor payment ID from client confirmation (required)
+ * @param body.paymentIntentId - The intent id from client confirmation (required)
  * @param body.productRef - Product reference (required)
  * @param body.planRef - Optional plan reference (if not in payment intent)
  * @param options - Configuration options
@@ -315,11 +315,10 @@ export async function processPaymentIntentCore(
  * which polls the PI status server-side until `succeeded` (up to
  * ~10s).
  *
- * The Stripe webhook handler flips PI status BEFORE booking the credit
- * transaction (step 1 vs step 5 of `stripe-payment-webhook.handler.ts`).
- * Processor-fee lookups can push the credit-booking tail past the
- * backend `/process` poll's 2s post-success buffer. To close that
- * sub-second race the helper additionally:
+ * The backend books the credit before it flips the PI to `succeeded`,
+ * but it does not fail the payment when booking the credit fails, so a
+ * `succeeded` from `/process` does not prove the credit is in. The
+ * helper therefore also:
  *
  *   1. Captures `preCredits` via `getCustomerBalance` before
  *      `processPaymentIntent` (this is the customer's wallet state
@@ -342,7 +341,7 @@ export async function processPaymentIntentCore(
  * Implementation note: the backend's `/process` controller ignores
  * `productRef` / `planRef` on the request body (verified — the param
  * is named `_body: ProcessPaymentIntentDto`, and the service is invoked
- * with only `processorPaymentId` + `providerId`). The backend Zod
+ * with only `intentId` + `providerId`). The backend Zod
  * schema makes `productRef` optional precisely so this helper can
  * route topup PIs through the same `/process` route without inventing
  * a sentinel. Calling the same `solvaPay.processPaymentIntent` client
@@ -352,7 +351,7 @@ export async function processPaymentIntentCore(
  * @param request - Standard Web API Request object (used to extract the
  *   authenticated user / customer)
  * @param body - Topup processing parameters
- * @param body.paymentIntentId - Processor payment ID returned from the
+ * @param body.paymentIntentId - The intent id returned from the
  *   client `stripe.confirmPayment` call (required)
  * @param options - Configuration options
  * @param options.solvaPay - Optional SolvaPay instance (creates new one
@@ -517,8 +516,8 @@ export async function processTopupPaymentIntentCore(
       return { status: 'failed' }
     }
 
-    // Succeeded: PI is in terminal state but the webhook handler may
-    // still be writing the credit transaction. Without a baseline we
+    // Succeeded: PI is in terminal state, which does not prove the
+    // credit was booked. Without a baseline we
     // can't compute the delta, so fall through to the legacy
     // refetch-on-the-frontend path.
     if (preCredits === null || typeof solvaPay.getCustomerBalance !== 'function') {

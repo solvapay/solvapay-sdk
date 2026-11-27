@@ -18,7 +18,7 @@
           "method": "POST",
           "path": "/v1/sdk/payment-intents",
           "body": {
-            "processorPaymentId": "pi_1",
+            "intentId": "pi_1",
             "clientSecret": "pi_1_secret_abc",
             "publishableKey": "pk_test_1",
             "accountId": "acct_1",
@@ -38,7 +38,7 @@
         {
           "type": "text",
           "json": {
-            "processorPaymentId": "pi_1",
+            "intentId": "pi_1",
             "clientSecret": "pi_1_secret_abc",
             "publishableKey": "pk_test_1",
             "accountId": "acct_1",
@@ -47,7 +47,7 @@
         }
       ],
       "structuredContent": {
-        "processorPaymentId": "pi_1",
+        "intentId": "pi_1",
         "clientSecret": "pi_1_secret_abc",
         "publishableKey": "pk_test_1",
         "accountId": "acct_1",

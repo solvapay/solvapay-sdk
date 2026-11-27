@@ -406,12 +406,12 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       )
 
       expect(paymentIntent).toBeDefined()
-      expect(paymentIntent).toHaveProperty('processorPaymentId')
+      expect(paymentIntent).toHaveProperty('intentId')
       expect(paymentIntent).toHaveProperty('clientSecret')
       expect(paymentIntent).toHaveProperty('publishableKey')
 
       console.log(`✅ Payment intent created successfully:`, {
-        processorPaymentId: paymentIntent.processorPaymentId,
+        intentId: paymentIntent.intentId,
         hasClientSecret: !!paymentIntent.clientSecret,
         hasPublishableKey: !!paymentIntent.publishableKey,
       })

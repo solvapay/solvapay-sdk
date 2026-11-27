@@ -483,7 +483,7 @@ export interface SolvaPay {
    * Call this after the client has confirmed the payment intent.
    *
    * @param params - Payment processing parameters
-   * @param params.paymentIntentId - Processor payment ID from client confirmation
+   * @param params.paymentIntentId - The intent id from client confirmation
    * @param params.productRef - Product reference
    * @param params.customerRef - Customer reference
    * @param params.planRef - Optional plan reference (if not in payment intent)

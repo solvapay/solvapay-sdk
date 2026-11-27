@@ -324,7 +324,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/sdk/payment-intents/{processorPaymentId}/business-details': {
+  '/v1/sdk/payment-intents/{intentId}/business-details': {
     parameters: {
       query?: never
       header?: never
@@ -344,7 +344,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/sdk/payment-intents/{processorPaymentId}/process': {
+  '/v1/sdk/payment-intents/{intentId}/process': {
     parameters: {
       query?: never
       header?: never
@@ -2353,11 +2353,6 @@ export interface components {
       /** @example https://acme.com/privacy */
       privacyUrl?: string
       /**
-       * Descriptor appearing on the customer card statement
-       * @example ACME INC
-       */
-      statementDescriptor?: string
-      /**
        * State, county, or region from the legal entity address. Free text — values like "Greater London" are valid.
        * @example Greater London
        */
@@ -2415,15 +2410,15 @@ export interface components {
        */
       currency: string
       /**
+       * The payment intent id on the protocol
+       * @example pi_1a2b3c4d5e6f7g8h
+       */
+      intentId: string
+      /**
        * Plan reference
        * @example pln_2b3c4d5e6f7g
        */
       planRef?: string
-      /**
-       * Payment processor payment intent ID
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
-      processorPaymentId: string
       /**
        * Payment intent status
        * @example succeeded
@@ -2489,6 +2484,11 @@ export interface components {
        */
       expiresAt?: string
       /**
+       * The payment intent id on the protocol
+       * @example pi_1a2b3c4d5e6f7g8h
+       */
+      intentId: string
+      /**
        * Charge-currency amount in minor units (the currency the customer is billed in)
        * @example 4999
        */
@@ -2498,11 +2498,6 @@ export interface components {
        * @example pln_2b3c4d5e6f7g
        */
       planRef?: string
-      /**
-       * Payment processor payment intent ID
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
-      processorPaymentId: string
       /**
        * Stripe publishable key for the environment
        * @example pk_test_...
@@ -4488,7 +4483,7 @@ export interface operations {
       header?: never
       path: {
         /** @description Stripe payment intent ID (pi_…) */
-        processorPaymentId: string
+        intentId: string
       }
       cookie?: never
     }
@@ -4559,8 +4554,8 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        /** @description Payment processor ID returned from createPaymentIntent */
-        processorPaymentId: string
+        /** @description The intent id returned from createPaymentIntent */
+        intentId: string
       }
       cookie?: never
     }
@@ -4630,7 +4625,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        /** @description Payment intent reference or processor payment ID */
+        /** @description Payment intent reference or the intent id on the protocol */
         reference: string
       }
       cookie?: never

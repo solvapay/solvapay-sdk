@@ -37,10 +37,7 @@ type StubPlan = ListPlansResponse[number]
  * authored only on `options[]`; a pure-metered plan has no flat charge and
  * omits `price`.
  */
-function deriveHeadlinePrice(
-  options: StubPlan['options'],
-  currency = 'USD',
-): number | undefined {
+function deriveHeadlinePrice(options: StubPlan['options'], currency = 'USD'): number | undefined {
   const cur = currency.toUpperCase()
   const opts = options as Array<Record<string, unknown>>
   const isFlat = (option: Record<string, unknown>, oneTime: boolean) =>
@@ -382,7 +379,12 @@ export class StubSolvaPayClient implements SolvaPayClient {
     paywallReason?: 'limit_reached'
     plans?: ReturnType<StubSolvaPayClient['limitCatalog']>['plans']
     product?: ReturnType<StubSolvaPayClient['limitCatalog']>['product']
-    balance?: { creditBalance: number; remainingUnits: number; creditsPerUnit: number; currency: string }
+    balance?: {
+      creditBalance: number
+      remainingUnits: number
+      creditsPerUnit: number
+      currency: string
+    }
   }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.checkLimits))
@@ -640,13 +642,13 @@ export class StubSolvaPayClient implements SolvaPayClient {
       `   Customer: ${params.customerRef}, Amount: ${params.amount}, Currency: ${params.currency}`,
     )
 
-    const processorPaymentId = `pi_topup_${Math.random().toString(36).slice(2, 15)}`
+    const intentId = `pi_topup_${Math.random().toString(36).slice(2, 15)}`
 
     await this.addCredits(params.customerRef, params.amount)
 
     return {
-      processorPaymentId,
-      clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
+      intentId,
+      clientSecret: `${intentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
       publishableKey: 'pk_test_stub_demo_key',
       amount: params.amount,
       currency: params.currency,
@@ -677,11 +679,11 @@ export class StubSolvaPayClient implements SolvaPayClient {
       `   Customer: ${params.customerRef}, Product: ${params.productRef}, Plan: ${params.planRef}`,
     )
 
-    const processorPaymentId = `pi_stub_${Math.random().toString(36).slice(2, 15)}`
+    const intentId = `pi_stub_${Math.random().toString(36).slice(2, 15)}`
 
     return {
-      processorPaymentId,
-      clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
+      intentId,
+      clientSecret: `${intentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
       publishableKey: 'pk_test_stub_demo_key',
       amount: 2900,
       currency: 'USD',
@@ -1206,10 +1208,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Clone a product
    */
-  async cloneProduct(
-    productRef: string,
-    overrides?: { name?: string },
-  ): Promise<ProductResponse> {
+  async cloneProduct(productRef: string, overrides?: { name?: string }): Promise<ProductResponse> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
     this.log(`📡 Stub Request: POST /v1/sdk/products/${productRef}/clone`)
 

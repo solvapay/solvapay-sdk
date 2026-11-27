@@ -19,9 +19,7 @@ describe('useBusinessDetailsAttach', () => {
   })
 
   it('returns requiresBusinessAttach false when attach transport is absent', () => {
-    const { result } = renderHook(() =>
-      useBusinessDetailsAttach({ processorPaymentId: 'pi_test' }),
-    )
+    const { result } = renderHook(() => useBusinessDetailsAttach({ intentId: 'pi_test' }))
     expect(result.current.requiresBusinessAttach).toBe(false)
   })
 
@@ -30,7 +28,7 @@ describe('useBusinessDetailsAttach', () => {
 
     renderHook(() =>
       useBusinessDetailsAttach({
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
         attachBusinessDetails,
       }),
     )
@@ -46,7 +44,7 @@ describe('useBusinessDetailsAttach', () => {
 
     const { result } = renderHook(() =>
       useBusinessDetailsAttach({
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
         attachBusinessDetails,
         onTaxChange,
         refreshElements,
@@ -78,7 +76,7 @@ describe('useBusinessDetailsAttach', () => {
 
     const { result } = renderHook(() =>
       useBusinessDetailsAttach({
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
         attachBusinessDetails,
       }),
     )
@@ -108,7 +106,7 @@ describe('useBusinessDetailsAttach', () => {
     const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
     const { result } = renderHook(() =>
       useBusinessDetailsAttach({
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
         attachBusinessDetails,
       }),
     )
@@ -134,7 +132,7 @@ describe('useBusinessDetailsAttach', () => {
 
     const { result } = renderHook(() =>
       useBusinessDetailsAttach({
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
         attachBusinessDetails,
       }),
     )
@@ -151,7 +149,7 @@ describe('useBusinessDetailsAttach', () => {
 
     const { result } = renderHook(() =>
       useBusinessDetailsAttach({
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
         attachBusinessDetails,
       }),
     )
@@ -176,7 +174,7 @@ describe('useBusinessDetailsAttach', () => {
 
     const { result } = renderHook(() =>
       useBusinessDetailsAttach({
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
         attachBusinessDetails,
       }),
     )

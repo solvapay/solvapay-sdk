@@ -88,9 +88,7 @@ function Wrap({ value, children }: { value: SolvaPayContextValue; children: Reac
 
 async function selectBuyerCountry(value = 'SE') {
   await waitFor(() => {
-    expect(
-      document.querySelector('[data-solvapay-topup-form][data-state="ready"]'),
-    ).toBeTruthy()
+    expect(document.querySelector('[data-solvapay-topup-form][data-state="ready"]')).toBeTruthy()
   })
   const country = await screen.findByRole('combobox', { name: /country/i })
   await act(async () => {
@@ -506,10 +504,9 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     })
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
-    expect(onSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'pi_test_123' }),
-      { creditsAdded: 250 },
-    )
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ id: 'pi_test_123' }), {
+      creditsAdded: 250,
+    })
   })
 
   it('omits the extras argument when the backend does not surface creditsAdded', async () => {
@@ -645,14 +642,12 @@ describe('TopupForm business details + summary', () => {
     currency: 'USD',
   }
 
-  function businessCtx(
-    overrides?: Partial<SolvaPayContextValue>,
-  ): SolvaPayContextValue {
+  function businessCtx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     return ctx({
       createTopupPayment: vi.fn().mockResolvedValue({
         clientSecret: 'pi_topup_secret',
         publishableKey: 'pk_test_123',
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
       }),
       attachBusinessDetails: vi.fn().mockResolvedValue({ taxBreakdown }),
       ...overrides,
@@ -664,14 +659,14 @@ describe('TopupForm business details + summary', () => {
     let resolveTopup!: (value: {
       clientSecret: string
       publishableKey: string
-      processorPaymentId: string
+      intentId: string
     }) => void
     const createTopupPayment = vi.fn().mockImplementation(
       () =>
         new Promise<{
           clientSecret: string
           publishableKey: string
-          processorPaymentId: string
+          intentId: string
         }>(resolve => {
           resolveTopup = resolve
         }),
@@ -695,7 +690,7 @@ describe('TopupForm business details + summary', () => {
       resolveTopup({
         clientSecret: 'pi_topup_secret',
         publishableKey: 'pk_test_123',
-        processorPaymentId: 'pi_test_123',
+        intentId: 'pi_test_123',
       })
     })
 

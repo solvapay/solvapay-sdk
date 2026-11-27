@@ -23,14 +23,10 @@ const USE_REAL_BACKEND = process.env.USE_REAL_BACKEND === 'true'
 const SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY
 const SOLVAPAY_API_BASE_URL = process.env.SOLVAPAY_API_BASE_URL
 
-const describeIntegration =
-  USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
+const describeIntegration = USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
 
 /** Customer-facing charge in minor units (presentment currency). */
-function presentmentAmount(intent: {
-  amount: number
-  originalAmount?: number
-}): number {
+function presentmentAmount(intent: { amount: number; originalAmount?: number }): number {
   return intent.originalAmount ?? intent.amount
 }
 
@@ -102,7 +98,7 @@ describeIntegration('Paid plan payment intents — Real Backend', () => {
     expect(presentmentAmount(intent)).toBe(planPrice)
     expect(intent.amount).toBeGreaterThan(0)
     expect(intent.clientSecret).toBeDefined()
-    expect(intent.processorPaymentId).toBeDefined()
+    expect(intent.intentId).toBeDefined()
   })
 
   it('factory createPaymentIntent charges the plan price', async () => {
