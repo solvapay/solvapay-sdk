@@ -17,6 +17,7 @@ import type {
   SolvaPayClient,
 } from './types'
 import { buildPaywallGate } from './paywall-gate'
+import { generateRequestId } from './request-id'
 import { requireProductRef } from './resolve-product-ref'
 import { withRetry, createRequestDeduplicator } from './utils'
 import { SolvaPayError } from '@solvapay/core'
@@ -276,12 +277,6 @@ export class SolvaPayPaywall {
     return requireProductRef(metadata.product)
   }
 
-  private generateRequestId(): string {
-    const timestamp = Date.now()
-    const random = Math.random().toString(36).substring(2, 11)
-    return `solvapay_${timestamp}_${random}`
-  }
-
   /**
    * Pure decision routine — performs customer resolution, limits cache
    * lookup / fresh `checkLimits` fetch, and returns a `PaywallDecision`
@@ -306,7 +301,7 @@ export class SolvaPayPaywall {
     const product = this.resolveProduct(metadata)
     const usageType =
       metadata.freeLimit?.meter || metadata.meterName || metadata.usageType || 'requests'
-    const requestId = this.generateRequestId()
+    const requestId = generateRequestId()
     const startTime = Date.now()
 
     const inputCustomerRef = getCustomerRef
