@@ -1,5 +1,12 @@
 # @solvapay/agents
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [85e3c61]
+  - @solvapay/server@2.13.1
+
 ## 0.1.2
 
 ### Patch Changes
