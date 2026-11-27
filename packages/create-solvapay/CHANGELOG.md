@@ -1,5 +1,11 @@
 # create-solvapay
 
+## 0.9.2
+
+### Patch Changes
+
+- 8ce91ba: New MCP projects start on the SDK released with it: `@solvapay/mcp` 0.5.2, `@solvapay/mcp-core` 0.6.1 and `@solvapay/server` 2.12.1.
+
 ## 0.9.1
 
 ### Patch Changes
