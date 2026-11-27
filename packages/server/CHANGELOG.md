@@ -1,5 +1,11 @@
 # @solvapay/server changelog
 
+## 2.13.1
+
+### Patch Changes
+
+- 85e3c61: A paywall request id always ends in nine random characters, drawn from Web Crypto as the Go and Python SDKs draw theirs. Now and then it had fewer: `Math.random().toString(36)` can come out short.
+
 ## 2.13.0
 
 ### Minor Changes

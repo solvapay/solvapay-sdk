@@ -1,5 +1,11 @@
 # create-solvapay
 
+## 0.9.3
+
+### Patch Changes
+
+- 2743466: New MCP projects start on the SDK released with it: `@solvapay/server` 2.13.0.
+
 ## 0.9.2
 
 ### Patch Changes
