@@ -20,6 +20,11 @@ export interface CustomerWebhookObject {
   email?: string
   telephone?: string
   status?: string
+  /**
+   * Your own ID for this customer, set through the customer create or update API.
+   * `null` when you have not set one. Absent on payloads sent before the field existed.
+   */
+  externalRef?: string | null
 }
 
 type WebhookPayloadObject = Record<string, unknown>

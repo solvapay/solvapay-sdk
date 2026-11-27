@@ -36,6 +36,7 @@ const customerCreatedBody = JSON.stringify({
       name: 'Test User',
       email: 'test.user@example.com',
       status: 'active',
+      externalRef: 'MC-DEV-104382',
       created: 1774965198,
       product: {
         reference: 'mcp_AJDHR12U',
@@ -162,6 +163,22 @@ describe('verifyWebhook', () => {
       expect(event.data.object.reference).toBe('cus_0VXPU8NE')
     }
   })
+
+  it('parses customer.created payload with externalRef', () => {
+    const signature = createSignature(customerCreatedBody, secret)
+
+    const event = verifyWebhookNode({
+      body: customerCreatedBody,
+      signature,
+      secret,
+    })
+
+    expect(event.type).toBe('customer.created')
+    if (event.type === 'customer.created') {
+      const externalRef: string | null | undefined = event.data.object.externalRef
+      expect(externalRef).toBe('MC-DEV-104382')
+    }
+  })
 })
 
 // Type-level checks for webhook typing and usage examples.
@@ -176,6 +193,13 @@ type _CustomerProductShape = Assert<
   IsEqual<
     WebhookEventForType<'customer.created'>['data']['object']['product'],
     { reference: string } | null
+  >
+>
+
+type _CustomerExternalRefShape = Assert<
+  IsEqual<
+    WebhookEventForType<'customer.created'>['data']['object']['externalRef'],
+    string | null | undefined
   >
 >
 
