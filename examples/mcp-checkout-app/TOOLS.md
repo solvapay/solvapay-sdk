@@ -100,8 +100,7 @@ activation is the recovery path).
 Both name the same `limit.meter` (`free-previews`), so five calls total
 across both tools — not five each. Exhaustion emits the same gate shape
 as a paid tool (`paywallReason: 'limit_reached'` plus a plan ladder).
-The allowance is per customer, not per server. Managed MCP public tools
-stay unlimited; this path is SDK-only.
+The allowance is per customer, not per server.
 
 ## UI-only state-change tools (tagged `_meta.audience: 'ui'`)
 

@@ -568,26 +568,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/sdk/products/mcp/bootstrap': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Bootstrap MCP product integration
-     * @description Creates an MCP-enabled product with a unified plans array, configures origin URL, and maps tools to plans in one request.
-     */
-    post: operations['ProductSdkController_bootstrapMcpProduct']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   '/v1/sdk/purchases': {
     parameters: {
       query?: never
@@ -1916,164 +1896,6 @@ export interface components {
        * @example true
        */
       withinLimits: boolean
-    }
-    McpBootstrapDto: {
-      authApiKey?: string
-      authHeaderName?: string
-      description?: string
-      imageUrl?: string
-      mcpDomain?: string
-      metadata?: {
-        [key: string]: unknown
-      }
-      name?: string
-      originUrl: string
-      plans?: {
-        currency?: string
-        features?: {
-          [key: string]: unknown
-        }
-        key: string
-        name: string
-        options: (
-          | {
-              amountMinor: number
-              currency: string
-              /** @enum {string} */
-              kind: 'charge'
-              label?: string
-              meter?: string
-              oneTime?: boolean
-              /** @enum {string} */
-              per: 'unit' | 'seat' | 'flat'
-            }
-          | {
-              /** Format: date-time */
-              anchor?: string
-              count?: number
-              /** @enum {string} */
-              interval: 'week' | 'month' | 'year'
-              /** @enum {string} */
-              kind: 'billingCycle'
-            }
-          | {
-              charge: {
-                amountMinor: number
-                currency: string
-                label?: string
-                meter?: string
-                /** @enum {string} */
-                per: 'unit' | 'seat' | 'flat'
-              }
-              from: number
-              /** @enum {string} */
-              kind: 'tier'
-              label?: string
-              /** @enum {string} */
-              mode: 'graduated' | 'volume'
-              to: number | null
-            }
-          | {
-              cap: number
-              /** @enum {string} */
-              kind: 'limit'
-              label?: string
-              meter: string
-              /** @enum {string} */
-              onExceed: 'block' | 'draw_credits'
-              /** @enum {string} */
-              scope: 'billing_period' | 'lifetime' | 'rolling_window'
-              windowDays?: number
-            }
-          | {
-              feature: string
-              /** @enum {string} */
-              kind: 'entitlement'
-              label?: string
-              scope?: string
-              value: boolean | number | string
-            }
-          | {
-              days: number
-              /** @enum {string} */
-              kind: 'trial'
-              label?: string
-              /** @enum {string} */
-              onEnd: 'convert' | 'cancel'
-            }
-          | {
-              /** @enum {string} */
-              appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
-              currency?: string
-              cycles?: number
-              /** @enum {string} */
-              duration: 'once' | 'repeating' | 'forever'
-              /** @enum {string} */
-              kind: 'discount'
-              label?: string
-              /** @enum {string} */
-              mode: 'percentage' | 'fixed'
-              value: number
-            }
-          | {
-              /** @enum {string} */
-              kind: 'autoAssigned'
-              label?: string
-            }
-          | {
-              /** @enum {string} */
-              kind: 'hidden'
-              label?: string
-            }
-        )[]
-      }[]
-      productType?: string
-      tools?: {
-        description?: string
-        name: string
-        noPlan?: boolean
-        planKeys?: string[]
-      }[]
-    }
-    McpBootstrapResult: {
-      /** @description Auto-discovered tools used during bootstrap */
-      autoMappedTools?: {
-        description?: string
-        name?: string
-      }[]
-      /**
-       * Created or updated MCP server identity
-       * @example {
-       *       "defaultPlanRef": "pln_FREE123",
-       *       "id": "507f1f77bcf86cd799439011",
-       *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
-       *       "reference": "mcp_ABC123",
-       *       "subdomain": "acme-docs",
-       *       "url": "https://origin.example.com/mcp"
-       *     }
-       */
-      mcpServer: {
-        [key: string]: unknown
-      }
-      /**
-       * Resolved plan mapping by bootstrap key
-       * @example {
-       *       "free": {
-       *         "name": "Free",
-       *         "reference": "pln_FREE123"
-       *       }
-       *     }
-       */
-      planMap: {
-        [key: string]: unknown
-      }
-      /** @description Created product */
-      product: components['schemas']['SdkProductResponse']
-      /**
-       * True when tools were auto-discovered from origin because the request omitted tools
-       * @example true
-       */
-      toolsAutoMapped?: boolean
     }
     OneTimePurchaseInfo: {
       /**
@@ -4919,6 +4741,15 @@ export interface operations {
           'application/json': components['schemas']['ApiError']
         }
       }
+      /** @description isManagedMcp was true: Managed MCP takes no new servers */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Unexpected server error */
       500: {
         headers: {
@@ -5557,66 +5388,6 @@ export interface operations {
       }
       /** @description Plan or product not found */
       404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ApiError']
-        }
-      }
-      /** @description Unexpected server error */
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ApiError']
-        }
-      }
-    }
-  }
-  ProductSdkController_bootstrapMcpProduct: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['McpBootstrapDto']
-      }
-    }
-    responses: {
-      /** @description MCP product bootstrapped successfully */
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['McpBootstrapResult']
-        }
-      }
-      /** @description Invalid bootstrap request */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ApiError']
-        }
-      }
-      /** @description Missing or invalid credentials */
-      401: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ApiError']
-        }
-      }
-      /** @description The credentials are not allowed to do this */
-      403: {
         headers: {
           [name: string]: unknown
         }

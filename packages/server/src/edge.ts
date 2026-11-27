@@ -92,13 +92,9 @@ export type {
   CustomerResponseMapped,
   ActivatePlanResult,
   PaymentMethodInfo,
-  McpBootstrapRequest,
-  McpBootstrapResponse,
-  McpBootstrapPlanInput,
   ConfigureMcpPlansRequest,
   ConfigureMcpPlansResponse,
   McpToolPlanMappingInput,
-  ToolPlanMappingInput,
   SdkMerchantResponse,
   SdkProductResponse,
 } from './types/client'

@@ -1511,189 +1511,6 @@ class LimitResponse(BaseModel):
     """
 
 
-class Options18(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    amount_minor: Annotated[int, Field(alias="amountMinor", ge=0, le=9007199254740991)]
-    currency: Annotated[str, Field(max_length=3, min_length=3)]
-    kind: Literal["charge"]
-    label: str | None = None
-    meter: Annotated[str | None, Field(min_length=1)] = None
-    one_time: Annotated[bool | None, Field(alias="oneTime")] = None
-    per: Literal["unit", "seat", "flat"]
-
-
-class Options19(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    anchor: Annotated[
-        str | None,
-        Field(
-            pattern="^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-        ),
-    ] = None
-    count: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
-    interval: Literal["week", "month", "year"]
-    kind: Literal["billingCycle"]
-
-
-class Options20(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    charge: Charge
-    from_: Annotated[int, Field(alias="from", ge=0, le=9007199254740991)]
-    kind: Literal["tier"]
-    label: str | None = None
-    mode: Literal["graduated", "volume"]
-    to: Annotated[int | None, Field(ge=0, le=9007199254740991)]
-
-
-class Options21(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    cap: Annotated[int, Field(ge=0, le=9007199254740991)]
-    kind: Literal["limit"]
-    label: str | None = None
-    meter: Annotated[str, Field(min_length=1)]
-    on_exceed: Annotated[Literal["block", "draw_credits"], Field(alias="onExceed")]
-    scope: Literal["billing_period", "lifetime", "rolling_window"]
-    window_days: Annotated[int | None, Field(alias="windowDays", ge=1, le=9007199254740991)] = None
-
-
-class Options22(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    feature: Annotated[str, Field(min_length=1)]
-    kind: Literal["entitlement"]
-    label: str | None = None
-    scope: str | None = None
-    value: bool | int | float | str
-
-
-class Options23(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    days: Annotated[int, Field(ge=1, le=9007199254740991)]
-    kind: Literal["trial"]
-    label: str | None = None
-    on_end: Annotated[Literal["convert", "cancel"], Field(alias="onEnd")]
-
-
-class Options24(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    applies_to: Annotated[
-        Literal["recurring", "setup", "usage", "all"] | None, Field(alias="appliesTo")
-    ] = None
-    currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
-    cycles: Annotated[int | None, Field(ge=1, le=9007199254740991)] = None
-    duration: Literal["once", "repeating", "forever"]
-    kind: Literal["discount"]
-    label: str | None = None
-    mode: Literal["percentage", "fixed"]
-    value: Annotated[int, Field(gt=0, le=9007199254740991)]
-
-
-class Options25(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    kind: Literal["autoAssigned"]
-    label: str | None = None
-
-
-class Options26(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    kind: Literal["hidden"]
-    label: str | None = None
-
-
-class Plan1(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    currency: Annotated[str | None, Field(max_length=3, min_length=3)] = None
-    features: dict[str, Any] | None = None
-    key: Annotated[str, Field(min_length=1)]
-    name: Annotated[str, Field(min_length=1)]
-    options: list[
-        Options18
-        | Options19
-        | Options20
-        | Options21
-        | Options22
-        | Options23
-        | Options24
-        | Options25
-        | Options26
-    ]
-
-
-class Tool(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    description: str | None = None
-    name: Annotated[str, Field(min_length=1)]
-    no_plan: Annotated[bool | None, Field(alias="noPlan")] = None
-    plan_keys: Annotated[list[str] | None, Field(alias="planKeys")] = None
-
-
-class McpBootstrapDto(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    auth_api_key: Annotated[str | None, Field(alias="authApiKey")] = None
-    auth_header_name: Annotated[
-        str | None,
-        Field(
-            alias="authHeaderName",
-            max_length=64,
-            min_length=1,
-            pattern="^[A-Za-z0-9!#$%&'*+\\-.^_`|~]+$",
-        ),
-    ] = None
-    description: str | None = None
-    image_url: Annotated[str | None, Field(alias="imageUrl")] = None
-    mcp_domain: Annotated[str | None, Field(alias="mcpDomain")] = None
-    metadata: dict[str, Any] | None = None
-    name: str | None = None
-    origin_url: Annotated[str, Field(alias="originUrl")]
-    plans: list[Plan1] | None = None
-    product_type: Annotated[str | None, Field(alias="productType")] = None
-    tools: list[Tool] | None = None
-
-
-class AutoMappedTool(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    description: str | None = None
-    name: str | None = None
-
-
 class OneTimePurchaseInfo(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -1729,7 +1546,7 @@ class OneTimePurchaseInfo(BaseModel):
     """
 
 
-class Plan2(BaseModel):
+class Plan1(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2480,7 +2297,7 @@ class UpdateCustomerRequest(BaseModel):
     telephone: Telephone | Literal[""] | None = None
 
 
-class Options27(BaseModel):
+class Options18(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2494,7 +2311,7 @@ class Options27(BaseModel):
     per: Literal["unit", "seat", "flat"]
 
 
-class Options28(BaseModel):
+class Options19(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2510,7 +2327,7 @@ class Options28(BaseModel):
     kind: Literal["billingCycle"]
 
 
-class Options29(BaseModel):
+class Options20(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2523,7 +2340,7 @@ class Options29(BaseModel):
     to: Annotated[int | None, Field(ge=0, le=9007199254740991)]
 
 
-class Options30(BaseModel):
+class Options21(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2537,7 +2354,7 @@ class Options30(BaseModel):
     window_days: Annotated[int | None, Field(alias="windowDays", ge=1, le=9007199254740991)] = None
 
 
-class Options31(BaseModel):
+class Options22(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2549,7 +2366,7 @@ class Options31(BaseModel):
     value: bool | int | float | str
 
 
-class Options32(BaseModel):
+class Options23(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2560,7 +2377,7 @@ class Options32(BaseModel):
     on_end: Annotated[Literal["convert", "cancel"], Field(alias="onEnd")]
 
 
-class Options33(BaseModel):
+class Options24(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2577,7 +2394,7 @@ class Options33(BaseModel):
     value: Annotated[int, Field(gt=0, le=9007199254740991)]
 
 
-class Options34(BaseModel):
+class Options25(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2586,7 +2403,7 @@ class Options34(BaseModel):
     label: str | None = None
 
 
-class Options35(BaseModel):
+class Options26(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -2616,15 +2433,15 @@ class UpdatePlanRequest(BaseModel):
     ] = None
     options: (
         list[
-            Options27
-            | Options28
-            | Options29
-            | Options30
-            | Options31
-            | Options32
-            | Options33
-            | Options34
-            | Options35
+            Options18
+            | Options19
+            | Options20
+            | Options21
+            | Options22
+            | Options23
+            | Options24
+            | Options25
+            | Options26
         ]
         | None
     ) = None
@@ -3065,7 +2882,7 @@ class ListPlansResponse(BaseModel):
     )
     limit: int | float | None = None
     offset: int | float | None = None
-    plans: list[Plan2] | None = None
+    plans: list[Plan1] | None = None
     total: int | float | None = None
     """
     Total number of plans for the product
@@ -3234,53 +3051,6 @@ class ConfigureMcpPlansResult(BaseModel):
     product: SdkProductResponse
     """
     Updated product
-    """
-
-
-class McpBootstrapResult(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    auto_mapped_tools: Annotated[list[AutoMappedTool] | None, Field(alias="autoMappedTools")] = None
-    """
-    Auto-discovered tools used during bootstrap
-    """
-    mcp_server: Annotated[
-        dict[str, Any],
-        Field(
-            alias="mcpServer",
-            examples=[
-                {
-                    "defaultPlanRef": "pln_FREE123",
-                    "id": "507f1f77bcf86cd799439011",
-                    "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
-                    "reference": "mcp_ABC123",
-                    "subdomain": "acme-docs",
-                    "url": "https://origin.example.com/mcp",
-                }
-            ],
-        ),
-    ]
-    """
-    Created or updated MCP server identity
-    """
-    plan_map: Annotated[
-        dict[str, Any],
-        Field(alias="planMap", examples=[{"free": {"name": "Free", "reference": "pln_FREE123"}}]),
-    ]
-    """
-    Resolved plan mapping by bootstrap key
-    """
-    product: SdkProductResponse
-    """
-    Created product
-    """
-    tools_auto_mapped: Annotated[bool | None, Field(alias="toolsAutoMapped", examples=[True])] = (
-        None
-    )
-    """
-    True when tools were auto-discovered from origin because the request omitted tools
     """
 
 

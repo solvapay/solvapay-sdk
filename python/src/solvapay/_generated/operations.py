@@ -560,23 +560,6 @@ class AsyncSolvaPayApi:
         )
         return self._transport.parse(models.SdkProductResponse, data)
 
-    async def bootstrap_mcp_product(
-        self,
-        *,
-        body: models.McpBootstrapDto | dict[str, Any],
-    ) -> models.McpBootstrapResult:
-        """Bootstrap MCP product integration
-
-        POST /v1/sdk/products/mcp/bootstrap"""
-        data = await self._transport.request(
-            "POST",
-            f"/v1/sdk/products/mcp/bootstrap",
-            query={},
-            headers={},
-            body=encode_body(body),
-        )
-        return self._transport.parse(models.McpBootstrapResult, data)
-
     async def delete_product(
         self,
         *,
@@ -1502,23 +1485,6 @@ class SolvaPayApi:
             body=encode_body(body),
         )
         return self._transport.parse(models.SdkProductResponse, data)
-
-    def bootstrap_mcp_product(
-        self,
-        *,
-        body: models.McpBootstrapDto | dict[str, Any],
-    ) -> models.McpBootstrapResult:
-        """Bootstrap MCP product integration
-
-        POST /v1/sdk/products/mcp/bootstrap"""
-        data = self._transport.request(
-            "POST",
-            f"/v1/sdk/products/mcp/bootstrap",
-            query={},
-            headers={},
-            body=encode_body(body),
-        )
-        return self._transport.parse(models.McpBootstrapResult, data)
 
     def delete_product(
         self,

@@ -448,23 +448,6 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // POST: /v1/sdk/products/mcp/bootstrap
-    async bootstrapMcpProduct(params) {
-      const url = `${base}/v1/sdk/products/mcp/bootstrap`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        await throwApiError('Bootstrap MCP product', res)
-      }
-
-      return await res.json()
-    },
-
     // PUT: /v1/sdk/products/{productRef}/mcp/plans
     async configureMcpPlans(productRef, params) {
       const url = `${base}/v1/sdk/products/${productRef}/mcp/plans`

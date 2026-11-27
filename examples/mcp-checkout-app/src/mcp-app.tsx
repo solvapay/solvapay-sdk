@@ -8,8 +8,7 @@
  * constructs the `App`, and renders `<McpApp>`.
  *
  * All of these components (shell, views, plan-actions helpers,
- * narrator) live in the SDK so the Managed MCP surface can mount
- * the same surface on an HTTP page instead of inside the iframe.
+ * narrator) live in the SDK, not in this example.
  */
 
 import { createRoot } from 'react-dom/client'
