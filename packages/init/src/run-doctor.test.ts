@@ -262,7 +262,7 @@ describe('runDoctorInDirectory', () => {
     })
   })
 
-  describe('Python MCP imports and the SOLVAPAY_DEBUG line', () => {
+  describe('Python MCP imports', () => {
     let cwd: string
     const write = (name: string, content: string) => writeFile(path.join(cwd, name), content)
     const run = () => runDoctorInDirectory({ cwd, sdkVersions: async () => ['0.1.0'] })
@@ -309,7 +309,7 @@ describe('runDoctorInDirectory', () => {
       expect(check?.detail).toMatch(/^warning: .*This code runs today \(mcp 1\.30\.0 in uv\.lock\)/)
     })
 
-    it('passes a clean Python project and leaves out the TypeScript-only debug line', async () => {
+    it('passes a clean Python project', async () => {
       await write('pyproject.toml', 'dependencies = ["solvapay[mcp]==0.1.0"]\n')
       await write('uv.lock', lock('2.3.0'))
       await write('server.py', 'from solvapay.mcp import create_solvapay_mcp_server\n')
@@ -321,10 +321,9 @@ describe('runDoctorInDirectory', () => {
         ok: true,
         detail: 'none that need mcp 1.x',
       })
-      expect(report.checks.find(c => c.name === 'SOLVAPAY_DEBUG defaults')).toBeUndefined()
     })
 
-    it('keeps the debug line for a TypeScript project', async () => {
+    it('leaves the Python import check out of a TypeScript project', async () => {
       await write('package.json', JSON.stringify({ dependencies: { '@solvapay/server': '1.0.0' } }))
       await mkdir(path.join(cwd, 'node_modules', '@solvapay', 'server'), { recursive: true })
       await write(
@@ -337,8 +336,9 @@ describe('runDoctorInDirectory', () => {
         distTags: async () => ({ latest: '1.0.0' }),
       })
 
-      expect(report.checks.find(c => c.name === 'SOLVAPAY_DEBUG defaults')).toBeDefined()
       expect(importsCheck(report)).toBeUndefined()
+      // Unset SOLVAPAY_DEBUG means off everywhere in the SDK, so doctor has nothing to flag.
+      expect(report.checks.find(c => c.name.includes('SOLVAPAY_DEBUG'))).toBeUndefined()
     })
   })
 })

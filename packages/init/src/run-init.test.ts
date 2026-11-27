@@ -502,6 +502,34 @@ describe('runInitInDirectory', () => {
     expect(installSolvaPaySdk).not.toHaveBeenCalled()
     expect(output.join('')).not.toContain('SolvaPay SDK packages installed')
     expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
+    // The scaffolder prints its own next steps after init.
+    expect(output.join('')).not.toContain('Next steps:')
+  })
+
+  it('ends a TypeScript init with concrete next steps', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+
+    await runInitInDirectory({ cwd: TEST_CWD })
+
+    const text = output.join('')
+    expect(text).toContain('If your framework does not load .env')
+    expect(text).toContain('Next steps:')
+    expect(text).toContain('https://docs.solvapay.com/sdks/typescript/setup/quick-start')
+    expect(text).toContain('npx -y solvapay@latest doctor')
+    expect(text).not.toContain('Continue with the next step')
+  })
+
+  it('points a TypeScript MCP init at the MCP guide and verify', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+
+    await runInitInDirectory({ cwd: TEST_CWD, options: { features: ['mcp'] } })
+
+    const text = output.join('')
+    expect(text).toContain('https://docs.solvapay.com/sdks/typescript/guides/mcp')
+    expect(text).toContain('npx -y solvapay@latest verify <server url>/mcp')
+    expect(text).not.toContain('sdks/typescript/setup/quick-start')
   })
 
   it('hard-fails when verifyMerchant returns not_found', async () => {
