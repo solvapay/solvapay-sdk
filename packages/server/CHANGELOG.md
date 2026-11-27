@@ -1,5 +1,15 @@
 # @solvapay/server changelog
 
+## 2.13.0
+
+### Minor Changes
+
+- 28b14f5: `CustomerWebhookObject` gains an optional `externalRef` (`string | null`): your own ID for the customer, now sent on `customer.*` webhook events.
+
+### Patch Changes
+
+- 00ba50d: The generated API types follow the platform's spec, which now matches what the API accepts: `timestamp` on a usage event (`CreateUsageRequest`, and each event in `BulkCreateUsageRequest`) is optional; the API stamps the event when it is left out.
+
 ## 2.12.1
 
 ### Patch Changes
