@@ -8,6 +8,14 @@ import { SolvaPayError } from '@solvapay/core'
 import type { MoneyAmount } from './client'
 import type { AgentCalls, Allowed, Logger, RefusalReason, Refused } from './calls'
 import type { AgentLayer, AgentRejectionReason, VerifiedAgent } from './identity'
+import { isAgentKey } from './identity'
+import {
+  MPP_AGENT_KEY_HEADER,
+  MPP_CHALLENGE_HEADER,
+  MPP_RECEIPT_HEADER,
+  encodeMppReceipt,
+  type SolvaPayMppClient,
+} from './mpp'
 import { challengeHeaders, type ProtectedResource } from './oauth'
 import type { PromptFacts } from './prompt'
 
@@ -25,6 +33,8 @@ export type GateResult =
       detail: string
       /** With `protectedResource`, on a 401: the headers that send a host to sign in again. */
       challenge?: Headers
+      /** Set when this request paid with MPP first: send it, it holds the new payer's key. */
+      paid?: Headers
     }
   | {
       kind: 'refused'
@@ -33,8 +43,44 @@ export type GateResult =
       agent: VerifiedAgent
       /** With `protectedResource`, on a 401 (`agent_not_accepted`). */
       challenge?: Headers
+      /**
+       * Set when this request paid with MPP and the call was still refused (say
+       * its estimate is over one lot): send it, it holds the new payer's
+       * `SolvaPay-Agent-Key`. `refusalResponse` does.
+       */
+      paid?: Headers
     }
-  | { kind: 'allowed'; allowed: Allowed; agent: VerifiedAgent }
+  | {
+      kind: 'allowed'
+      allowed: Allowed
+      agent: VerifiedAgent
+      /**
+       * Set when this request paid with MPP: the headers to add to the paid
+       * response (`Payment-Receipt`, and the new payer's `SolvaPay-Agent-Key`).
+       */
+      paid?: Headers
+    }
+  /**
+   * MPP is on and this call must be paid first: answer 402 with `headers`
+   * (`WWW-Authenticate`). `refused` says why when the agent had a key (an MPP
+   * payer short of balance); `problem` when a credential it sent did not pay.
+   * When this request paid and a new payer is still short, `headers` also
+   * carries its `SolvaPay-Agent-Key`, so it pays again as itself.
+   */
+  | {
+      kind: 'mpp_challenge'
+      status: 402
+      headers: Headers
+      refused?: Refused
+      problem?: { type?: string; title?: string; detail?: string }
+    }
+
+/** MPP on a merchant's gate (preview): agents with no SolvaPay key pay with MPP. */
+export interface MppGateOptions {
+  client: SolvaPayMppClient
+  /** The merchant's host as agents call it, which MPP challenges are bound to. */
+  realm: string
+}
 
 export interface GateCall {
   /** The key the caller presented (bearer token or API key header). */
@@ -49,6 +95,8 @@ export interface GateCall {
   /** Ends a wait for the owner when the caller goes away. */
   signal: AbortSignal
   logFields?: Record<string, unknown>
+  /** The MPP credential the request carries (`mppCredentialOf(request.headers)`), if any. */
+  mppCredential?: string | null
 }
 
 export function createAgentHttpGate(deps: {
@@ -57,14 +105,101 @@ export function createAgentHttpGate(deps: {
   log: Logger
   /** Turns the OAuth challenge on: 401 results carry the headers that send a host to sign in. */
   protectedResource?: ProtectedResource
+  /** Turns MPP on: a call with no SolvaPay key gets a 402 it can pay with MPP. */
+  mpp?: MppGateOptions
 }): (call: GateCall) => Promise<GateResult> {
   const challenge = (description: string) =>
     deps.protectedResource
       ? { challenge: challengeHeaders(deps.protectedResource, description) }
       : {}
-  return async call => {
+  const mpp = deps.mpp
+  async function mppChallenge(
+    agentKey: string | undefined,
+    why: { refused?: Refused; problem?: { type?: string; title?: string; detail?: string } } = {},
+  ): Promise<GateResult> {
+    if (!mpp) throw new Error('MPP challenge asked for with MPP off')
+    const { wwwAuthenticate } = await mpp.client.challenge({
+      realm: mpp.realm,
+      ...(agentKey ? { agentKey } : {}),
+    })
+    return {
+      kind: 'mpp_challenge',
+      status: 402,
+      headers: challengeHeadersOf(wwwAuthenticate),
+      ...why,
+    }
+  }
+
+  /** The agent paid with MPP: SolvaPay checks it, then the call goes ahead on the payer's key. */
+  async function payWithMpp(call: GateCall, credential: string): Promise<GateResult> {
+    if (!mpp) throw new Error('MPP credential seen with MPP off')
+    const presented = isAgentKey(call.presentedKey) ? call.presentedKey : undefined
+    const paid = await mpp.client.credential({
+      realm: mpp.realm,
+      authorization: credential,
+      ...(presented ? { agentKey: presented } : {}),
+    })
+    if (paid.status === 'refused') {
+      deps.log.info('call.mpp_refused', {
+        requestId: call.requestId,
+        ...call.logFields,
+        ...paid.problem,
+      })
+      return {
+        kind: 'mpp_challenge',
+        status: 402,
+        headers: challengeHeadersOf(paid.wwwAuthenticate),
+        problem: paid.problem,
+      }
+    }
+    const agentKey = paid.agentKey ?? presented
+    if (!agentKey)
+      throw new Error(`MPP payment ${paid.lot.reference} came with no key for its payer`)
+    deps.log.info('call.mpp_paid', {
+      requestId: call.requestId,
+      ...call.logFields,
+      agentRef: paid.agentRef,
+      lotRef: paid.lot.reference,
+      newPayer: paid.agentKey !== undefined,
+    })
+    // The payment is made: whatever happens to the call, a new payer's key goes
+    // back with the answer, or the agent pays again as yet another new payer.
+    let result: GateResult
+    try {
+      result = await gate({ ...call, presentedKey: agentKey, mppCredential: null })
+    } catch (error) {
+      if (!paid.agentKey) throw error
+      throw new MppPaidCallError(error, payerKeyHeaders(paid.agentKey))
+    }
+    switch (result.kind) {
+      case 'allowed': {
+        const headers = new Headers({
+          [MPP_RECEIPT_HEADER]: encodeMppReceipt(paid.receipt, result.allowed.callRef),
+        })
+        if (paid.agentKey) headers.set(MPP_AGENT_KEY_HEADER, paid.agentKey)
+        return { ...result, paid: headers }
+      }
+      case 'mpp_challenge':
+        if (paid.agentKey) result.headers.set(MPP_AGENT_KEY_HEADER, paid.agentKey)
+        return result
+      case 'refused':
+      case 'rejected':
+        return paid.agentKey ? { ...result, paid: payerKeyHeaders(paid.agentKey) } : result
+      case 'not_agent':
+        throw new Error(
+          `MPP payment ${paid.lot.reference}: its payer's key is not a SolvaPay agent key`,
+        )
+    }
+  }
+
+  async function gate(call: GateCall): Promise<GateResult> {
+    if (mpp && call.mppCredential) return payWithMpp(call, call.mppCredential)
     const identity = await deps.agentLayer.identify(call.presentedKey)
-    if (identity.kind === 'not_agent') return { kind: 'not_agent' }
+    if (identity.kind === 'not_agent') {
+      // No key at all: an agent that can pay with MPP. A key that is not SolvaPay's
+      // stays with the merchant's own auth.
+      return mpp && call.presentedKey === '' ? mppChallenge(undefined) : { kind: 'not_agent' }
+    }
     if (identity.kind === 'rejected') {
       deps.log.info('call.rejected', {
         requestId: call.requestId,
@@ -92,6 +227,10 @@ export function createAgentHttpGate(deps: {
       ...(call.logFields ? { logFields: call.logFields } : {}),
     })
     if (begun.kind === 'refused') {
+      // An MPP payer has no owner to top it up: it pays again.
+      if (mpp && begun.reason === 'topup_required' && identity.agent.payer === 'mpp') {
+        return mppChallenge(call.presentedKey, { refused: begun })
+      }
       const status = refusalStatus(begun.reason)
       return {
         kind: 'refused',
@@ -103,6 +242,13 @@ export function createAgentHttpGate(deps: {
     }
     return { kind: 'allowed', allowed: begun, agent: identity.agent }
   }
+  return gate
+}
+
+function challengeHeadersOf(wwwAuthenticate: string[]): Headers {
+  const headers = new Headers()
+  for (const value of wwwAuthenticate) headers.append(MPP_CHALLENGE_HEADER, value)
+  return headers
 }
 
 export type RefusalStatus = 401 | 402 | 422 | 502
@@ -142,10 +288,52 @@ export function refusalStatus(reason: RefusalReason): RefusalStatus {
  * A plain JSON refusal, for a merchant with no error format of its own. Pass
  * the gate's `challenge` and a 401 carries it, so a host signs in again.
  */
-export function refusalResponse(refused: Refused, challenge?: Headers): Response {
+/**
+ * The response to a refused call. Pass the result's `paid` when it has one:
+ * the request paid with MPP first, and a new payer's key must reach it.
+ */
+export function refusalResponse(refused: Refused, challenge?: Headers, paid?: Headers): Response {
   const status = refusalStatus(refused.reason)
+  const headers = new Headers(paid)
+  if (status === 401 && challenge) challenge.forEach((value, name) => headers.set(name, value))
   return Response.json(
     { error: { type: refused.reason, message: refused.message } },
-    { status, ...(status === 401 && challenge ? { headers: challenge } : {}) },
+    { status, headers },
   )
 }
+
+/** The headers that hand a new MPP payer its key. */
+function payerKeyHeaders(agentKey: string): Headers {
+  return new Headers({ [MPP_AGENT_KEY_HEADER]: agentKey })
+}
+
+/**
+ * The call failed after the agent paid with MPP and became a new payer. Send
+ * `paid` with the error response: it holds the payer's `SolvaPay-Agent-Key`,
+ * which it needs to spend the balance it just bought.
+ */
+export class MppPaidCallError extends Error {
+  constructor(
+    readonly cause: unknown,
+    readonly paid: Headers,
+  ) {
+    super(
+      `The call failed after its MPP payment: ${cause instanceof Error ? cause.message : String(cause)}. ` +
+        "Send `paid` with the error response: it holds the new payer's SolvaPay-Agent-Key.",
+    )
+    this.name = 'MppPaidCallError'
+  }
+}
+
+export {
+  MPP_AGENT_KEY_HEADER,
+  MPP_CHALLENGE_HEADER,
+  MPP_PAYMENT_AUTHORIZATION_HEADER,
+  MPP_RECEIPT_HEADER,
+  createSolvaPayMppClient,
+  encodeMppReceipt,
+  mppCredentialOf,
+  type MppCredentialResult,
+  type MppReceipt,
+  type SolvaPayMppClient,
+} from './mpp'
