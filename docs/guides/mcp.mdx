@@ -110,7 +110,7 @@ registerPayable('submit_order', {
 
 ## Free tools with a usage cap
 
-`registerFree` is the SDK-only path for an otherwise-free tool with a per-customer cap declared in code. Exhaustion emits the same paywall gate as `registerPayable`. Managed MCP public tools stay unlimited.
+`registerFree` is the SDK-only path for an otherwise-free tool with a per-customer cap declared in code. Exhaustion emits the same paywall gate as `registerPayable`.
 
 ```typescript
 additionalTools: ({ registerPayable, registerFree }) => {

@@ -3,7 +3,7 @@ title: "Add a free allowance to MCP tools"
 description: "Cap otherwise-free MCP tools per customer in code, share one allowance across tools, and emit the existing paywall gate when the cap is reached."
 ---
 
-Use `registerFree` when a tool should stay free up to a per-customer cap you declare in code. Exhaustion uses the same paywall gate as a paid tool. The [Python](/sdks/python/guides/mcp) (`register_free`) and [Go](/sdks/go/guides/mcp) (`RegisterFree`) SDKs have the same free tools, with the same caps and messages. Managed MCP public tools stay unlimited.
+Use `registerFree` when a tool should stay free up to a per-customer cap you declare in code. Exhaustion uses the same paywall gate as a paid tool. The [Python](/sdks/python/guides/mcp) (`register_free`) and [Go](/sdks/go/guides/mcp) (`RegisterFree`) SDKs have the same free tools, with the same caps and messages.
 
 ## Who this is for
 
@@ -89,10 +89,6 @@ The Console usage page splits successful calls into three kinds. Keep them disti
 | **Free** | A `registerFree` allowance |
 
 A free allowance is not plan-derived. Do not call it included. Free usage does not reduce a customer’s paid remaining.
-
-## Managed MCP
-
-Public tools on Managed MCP stay unlimited. There is no Console setting for this cap. If you need a per-customer free allowance that converts to a paid plan, use an SDK free tool: this page for TypeScript, or the [Python](/sdks/python/guides/mcp) and [Go](/sdks/go/guides/mcp) MCP guides.
 
 ## Verify
 

@@ -58,37 +58,6 @@ Server default (platform-local): `http://localhost:3030`
   IPv4/IPv6 mismatches (`127.0.0.1` vs `::1`).
 - Set `SOLVAPAY_WEBHOOK_SECRET` to the endpoint signing secret from SolvaPay backend.
 
-## Optional bootstrap setup
-
-You can bootstrap product + plans + MCP mapping in one API call before running the bridge:
-
-```ts
-import { createSolvaPay } from '@solvapay/server'
-
-const solvaPay = createSolvaPay({
-  apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-  apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL,
-})
-
-await solvaPay.bootstrapMcpProduct({
-  name: 'Bridge Example',
-  originUrl: 'https://origin.example.com/mcp',
-  plans: [
-    { key: 'free', name: 'Free', price: 0, billingCycle: 'monthly', freeUnits: 1000 },
-    { key: 'pro', name: 'Pro', price: 20, billingCycle: 'monthly' },
-  ],
-  defaultPlanKey: 'free',
-  tools: [
-    { name: 'list_tasks', planKeys: ['free'] },
-    { name: 'create_task', planKeys: ['pro'] },
-    { name: 'health_check', noPlan: true },
-  ],
-})
-```
-
-`requiresPayment` is derived by the backend from each plan's `price` and `type`.
-A free plan can still include `billingCycle` and `freeUnits`.
-
 ## End-to-end OAuth flow script
 
 ```bash
