@@ -233,6 +233,11 @@ export function createRequestDeduplicator<T = unknown>(
       },
       Math.min(cacheTTL, 1000),
     ) // Clean up at least every second or every cacheTTL, whichever is smaller
+
+    // Cache cleanup must never keep a Node process alive: without this, any
+    // script, CLI or job that does one customer lookup never exits. Node
+    // returns a Timeout with `unref`; Workers and browsers return a number.
+    ;(_cleanupInterval as { unref?: () => unknown }).unref?.()
   }
 
   const deduplicate = async (key: string, fn: () => Promise<T>): Promise<T> => {
